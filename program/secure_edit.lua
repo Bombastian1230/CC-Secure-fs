@@ -130,9 +130,7 @@ local function save_encrypted(_sPath)
         table.insert(nonce_hexes, string.format("%02x", byte))
     end
 
-    local file_name = utils.hex_from_string(chacha20.crypt(_sPath, key, nonce))
-
-    file, fileerr = fs.open(file_name  .. "." ..  table.concat(nonce_hexes), "w")
+    file, fileerr = fs.open(_sPath  .. "." ..  table.concat(nonce_hexes), "w")
     if file then
         if file then
             local e_data = encrypt_tLines()
