@@ -135,4 +135,4 @@ local function encrypt(plaintext, key, nonce)
     return string.char(table.unpack(cipherbytes)), nonce
 end
 
-return {crypt = encrypt}
+return {crypt = encrypt, generate_nonce = generate_nonce, generate_keystream = generate_keystream}
