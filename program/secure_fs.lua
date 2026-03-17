@@ -32,7 +32,7 @@ function S_fs.getKeystream(position, data_size, path, key)
             end
         end
     end
-    
+
     local keystream_start = (position) % 64 + 1
     local keystream_end = keystream_start + data_size - 1
 
@@ -58,7 +58,7 @@ end
 S_fs.isDriveRoot = function(path)
     -- Force the root directory to be a mount.
     return O_fs.getDir(path) == ".." or O_fs.getDir(path) == "root" or
-    O_fs.getDrive(path) ~= O_fs.getDrive(O_fs.getDir(path))
+        O_fs.getDrive(path) ~= O_fs.getDrive(O_fs.getDir(path))
 end
 
 ---Open a file for reading/writing
@@ -74,24 +74,24 @@ S_fs.open = function(path, mode)
     local isAppending = mode:match("^a")
     local isExisting = O_fs.exists(path)
 
-    
+
     -- Create a temporary unencrypted file
-    local tmp_handle = O_fs.open("os/.tmp_" .. string.gsub(path, "\\", "_"), "w+b")
-    print("os/.tmp_" .. string.gsub(path, "\\", "_"))
-    
+    local tmp_path = "os/.tmp_" .. string.gsub(path, "\\", "_")
+    local tmp_handle = O_fs.open(tmp_path, "w+b")
 
     local O_handle, err
     if not isTrucating and isExisting then
+        -- If a file isn't in write mode use the first 12 bytes as nonce and decrypt the file
         O_handle, err = O_fs.open(path, "r+b")
         if O_handle == nil then return O_handle, err end
 
         S_handle.nonce = O_handle.read(12)
 
-        for i = 1, O_fs.getSize(path), 4096 do
+        while true do
             local e_chunk = O_handle.read(4096)
+            if not e_chunk then break end
 
             local chunk = chacha20.crypt(e_chunk, encryption_key, S_handle.nonce)
-            
             tmp_handle.write(chunk)
         end
 
@@ -101,109 +101,108 @@ S_fs.open = function(path, mode)
             tmp_handle.seek("set", 0)
         end
     else
+        -- Otherwise generate a new random nonce
+        O_handle, err = O_fs.open(path, "w+b")
+        if O_handle == nil then return O_handle, err end
+
         S_handle.nonce = chacha20.generate_nonce()
     end
 
-
-
-    
     for k, v in pairs(O_handle) do
         S_handle[k] = v
     end
-    
-    if S_handle.nonce == nil then
-        S_handle.nonce = O_handle.read(12)
+
+    ----- Functions that are always available
+    ---Seek a position in a file
+    ---@param whence "set"|"cur"|"end"
+    ---@param offset integer
+    ---@return integer
+    S_handle.seek = function(whence, offset)
+        return tmp_handle.seek(whence, offset)
     end
-
-    if not isTrucating
-    
-    print(S_handle.nonce)
-
     ---Read the file content 'count' amount of bytes, defaults to 1
     ---@param count? number
     ---@return string content The content of the file
-    S_handle.read = function (count)
-        if not mode:match("b") then
-            count = 1
-        end
-        return tmp_handle.read(count)
+    S_handle.read = function(count)
+        return tmp_handle.read(count or 1)
     end
     ---Read all remaining bytes of the file
     ---@return string
-    S_handle.readAll = function ()
+    S_handle.readAll = function()
         return tmp_handle.readAll()
     end
     ---Read the one line of the file
     ---@param withTrailing boolean
-    ---@return string content 
-    S_handle.readLine = function (withTrailing)
+    ---@return string content
+    S_handle.readLine = function(withTrailing)
         return tmp_handle.readLine(withTrailing)
     end
-    ---Write to the file using either a byte or string
-    ---@param ... string|integer
-    S_handle.write = function (...)
-        tmp_handle.write(...)
-    end 
-    ---Write to the file using a string with a newline
-    S_handle.writeLine = function (line)
-        tmp_handle.writeLine(line)
-    end
 
-    ---Flush the file, saving it without closing it
-    S_handle.flush = function ()
-        local tmp_position = tmp_handle.seek("cur", 0)
-        local O_position = O_handle.seeK("cur", 0)
-
-        local new_nonce = chacha20.generate_nonce()
-        local file_length = tmp_handle.seek("end", 0)
-
-        tmp_handle.seek("set", 0)
-        O_handle.seek("set", 0)
-        O_handle.write(new_nonce)
-
-        for i = 1, file_length, 4096 do
-            local chunk = tmp_handle.read(4096)
-
-            local e_chunk = chacha20.crypt(chunk, encryption_key, new_nonce)
-
-            O_handle.write(e_chunk)
+    if isWriteable then
+        ----- Functions for Write handles
+        ---Write to the file using either a byte or string
+        ---@param ... string|integer
+        S_handle.write = function(...)
+            tmp_handle.write(...)
+        end
+        ---Write to the file using a string with a newline
+        S_handle.writeLine = function(line)
+            tmp_handle.writeLine(line)
         end
 
-        O_handle.flush()
+        local function saveToDisk() 
+            local tmp_position = tmp_handle.seek("cur", 0)
+            local O_position = O_handle.seek("cur", 0)
 
-        tmp_handle.seek("set", tmp_position)
-        O_handle.seek("set", O_position)
-    end
+            local new_nonce = chacha20.generate_nonce()
+            local file_length = tmp_handle.seek("end", 0)
 
-    S_handle.close = function ()
-        local new_nonce = chacha20.generate_nonce()
-        local file_length = tmp_handle.seek("end", 0)
+            tmp_handle.seek("set", 0)
+            O_handle.seek("set", 0)
+            O_handle.write(new_nonce)
 
-        tmp_handle.seek("set", 0)
-        O_handle.seek("set", 0)
-        O_handle.write(new_nonce)
+            for i = 1, file_length, 4096 do
+                local chunk = tmp_handle.read(4096)
 
-        for i = 1, file_length, 4096 do
-            local chunk = tmp_handle.read(4096)
+                local e_chunk = chacha20.crypt(chunk, encryption_key, new_nonce)
 
-            local e_chunk = chacha20.crypt(chunk, encryption_key, new_nonce)
+                O_handle.write(e_chunk)
+            end
 
-            O_handle.write(e_chunk)
+            tmp_handle.seek("set", tmp_position)
+            O_handle.seek("set", O_position)
         end
 
-        O_handle.close()
+        ---Flush the file, saving it without closing it
+        S_handle.flush = saveToDisk()
+
+        ---Close the file
+        S_handle.close = function()
+            saveToDisk()
+
+            O_handle.close()
+            tmp_handle.close()
+            O_fs.delete(tmp_path)
+        end
+    else
+        S_handle.close = function()
+            O_handle.close()
+            tmp_handle.close()
+            O_fs.delete(tmp_path)
+        end
     end
+
 
     return S_handle
 end
 
-encryption_key = "\104\147\125\51\76\33\131\137\146\36\149\132\182\20\37\180\47\233\201\129\180\60\36\43\189\30\125\174\149\242\30\88"
-print(encryption_key)
+encryption_key =
+"\104\147\125\51\76\33\131\137\146\36\149\132\182\20\37\180\47\233\201\129\180\60\36\43\189\30\125\174\149\242\30\88"
 
-local file, err = assert(S_fs.open("Testing.txt", "w"))
+local file, err = assert(S_fs.open("Testing.txt", "r"))
 
 if file == nil then print(err, "crash") end
 
-
+print(file.readAll())
 
 file.close()
