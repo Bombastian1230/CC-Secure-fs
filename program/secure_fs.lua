@@ -68,31 +68,23 @@ end
 ---@return string?
 S_fs.open = function(path, mode)
     local S_handle = {}
-    print("in open")
-    if not O_fs.exists(path) then
-        S_handle.nonce = chacha20.generate_nonce()
-    end
 
+    local isTrucating = mode:match("^w")
+    local isWriteable = mode:match("[wa+]")
+    local isAppending = mode:match("^a")
+    local isExisting = O_fs.exists(path)
+
+    
     -- Create a temporary unencrypted file
     local tmp_handle = O_fs.open("os/.tmp_" .. string.gsub(path, "\\", "_"), "w+b")
     print("os/.tmp_" .. string.gsub(path, "\\", "_"))
+    
 
-    -- If the mode is write or append try to create the file
-    if mode:match("^w.?.?") or mode:match("^a.?") then
-        local create_handle, err = O_fs.open(path, "ab")
-        if create_handle == nil then return create_handle, err end
-        
-        create_handle.close()
-    end
-    
-    local O_handle, err = O_fs.open(path, "r+b")
-    if O_handle == nil then return O_handle, err end
-    
-    for k, v in pairs(O_handle) do
-        S_handle[k] = v
-    end
-    
-    if S_handle.nonce == nil then
+    local O_handle, err
+    if not isTrucating and isExisting then
+        O_handle, err = O_fs.open(path, "r+b")
+        if O_handle == nil then return O_handle, err end
+
         S_handle.nonce = O_handle.read(12)
 
         for i = 1, O_fs.getSize(path), 4096 do
@@ -102,7 +94,28 @@ S_fs.open = function(path, mode)
             
             tmp_handle.write(chunk)
         end
+
+        if isAppending then
+            tmp_handle.seek("end", 0)
+        else
+            tmp_handle.seek("set", 0)
+        end
+    else
+        S_handle.nonce = chacha20.generate_nonce()
     end
+
+
+
+    
+    for k, v in pairs(O_handle) do
+        S_handle[k] = v
+    end
+    
+    if S_handle.nonce == nil then
+        S_handle.nonce = O_handle.read(12)
+    end
+
+    if not isTrucating
     
     print(S_handle.nonce)
 
@@ -138,7 +151,7 @@ S_fs.open = function(path, mode)
 
     ---Flush the file, saving it without closing it
     S_handle.flush = function ()
-        local tmp_position = tmp_handle.seeK("cur", 0)
+        local tmp_position = tmp_handle.seek("cur", 0)
         local O_position = O_handle.seeK("cur", 0)
 
         local new_nonce = chacha20.generate_nonce()
