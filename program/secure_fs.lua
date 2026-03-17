@@ -304,6 +304,21 @@ S_fs.open = function(path, mode)
     return S_handle
 end
 
+S_fs.copy = function (source, destination)
+    source = normalize(source)
+    destination = normalize(destination)
+
+    if not S_fs.exists(source) then
+        error(source .. ": No such file")
+    end
+    if S_fs.isReadOnly(destination) then
+        error("Access denied")
+    end
+
+    local source_file = S_fs.open(source, "rb")
+end
+
+
 encryption_key =
 "\104\147\125\51\76\33\131\137\146\36\149\132\182\20\37\180\47\233\201\129\180\60\36\43\189\30\125\174\149\242\30\88"
 
