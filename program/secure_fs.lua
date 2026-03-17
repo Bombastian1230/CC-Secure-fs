@@ -73,94 +73,103 @@ end
 ---@return table|nil
 ---@return string?
 S_fs.open = function(path, mode)
-    print("Before O_fs.open")
-    local O_handle, err = O_fs.open(path, mode)
-    print("After O_fs.open")
-    if O_handle == nil then return O_handle, err end
-    print("After error check")
-
     local S_handle = {}
-    for k, v in pairs(O_handle) do
-        S_handle[k] = v
+
+    if not O_fs.exists(path) then
+        S_handle.nonce = chacha20.generate_nonce()
     end
 
     os.queueEvent("key_request", "fileopen", path)
     _, S_handle.key = os.pullEvent("key_response")
 
+    local O_handle, err = O_fs.open(path, mode)
+    if O_handle == nil then return O_handle, err end
 
-    ---Read the file
-    ---@param count? number
-    ---@return string content The decrypted content of the file
-    S_handle.read = function(count)
-        if count == nil then count = 1 end
-
-        local current_pos = O_handle.seek("cur", 0)
-        local e_content = O_handle.read(count)
-
-        local keystream = S_fs.getKeystream(current_pos, #e_content, path, S_handle.key)
-        local content = S_fs.crypt(e_content, keystream)
-
-        return content
+    for k, v in pairs(O_handle) do
+        S_handle[k] = v
     end
 
-    S_handle.readAll = function ()
-        local current_pos = O_handle.seek("cur", 0)
-        local e_content = O_handle.readAll()
-
-        local keystream = S_fs.getKeystream(current_pos, #e_content, path, S_handle.key)
-        local content = S_fs.crypt(e_content, keystream)
-
-        return content
+    if S_handle.nonce == nil then
+        S_handle.nonce = O_handle.read(12)
     end
 
-    S_handle.readLine = function (withTrailing)
-        local current_pos = O_handle.seek("cur", 0)
-        local e_content = O_handle.readLine(withTrailing)
+    -- Create a temporary unencrypted file
+    local tmp_handle = O_fs.open("os/.tmp_" .. string.gsub(path, "\\", "_"), "r+")
+    print("os/.tmp_" .. string.gsub(path, "\\", "_"))
 
-        local keystream = S_fs.getKeystream(current_pos, #e_content, path, S_handle.key)
-        local content = S_fs.crypt(e_content, keystream)
 
-        return content
-    end
+    
 
-    S_handle.write = function (...)
-        local content
-        if type(...) == "string" then
-            content = ...
-        elseif type(...) == "number" then
-            content = string.char(...)
-        end
 
-        local current_pos = O_handle.seek("cur", 0)
+    print(S_handle.nonce)
+
+    -- ---Read the file
+    -- ---@param count? number
+    -- ---@return string content The decrypted content of the file
+    -- S_handle.read = function(count)
+    --     if count == nil then count = 1 end
+
+    --     local current_pos = O_handle.seek("cur", 0)
+    --     local e_content = O_handle.read(count)
+
+    --     local keystream = S_fs.getKeystream(current_pos, #e_content, path, S_handle.key)
+    --     local content = S_fs.crypt(e_content, keystream)
+
+    --     return content
+    -- end
+
+    -- S_handle.readAll = function ()
+    --     local current_pos = O_handle.seek("cur", 0)
+    --     local e_content = O_handle.readAll()
+
+    --     local keystream = S_fs.getKeystream(current_pos, #e_content, path, S_handle.key)
+    --     local content = S_fs.crypt(e_content, keystream)
+
+    --     return content
+    -- end
+
+    -- S_handle.readLine = function (withTrailing)
+    --     local current_pos = O_handle.seek("cur", 0)
+    --     local e_content = O_handle.readLine(withTrailing)
+
+    --     local keystream = S_fs.getKeystream(current_pos, #e_content, path, S_handle.key)
+    --     local content = S_fs.crypt(e_content, keystream)
+
+    --     return content
+    -- end
+
+    -- S_handle.write = function (...)
+    --     local content
+    --     if type(...) == "string" then
+    --         content = ...
+    --     elseif type(...) == "number" then
+    --         content = string.char(...)
+    --     end
+
+    --     local current_pos = O_handle.seek("cur", 0)
         
-        local keystream = S_fs.getKeystream(current_pos, #content, path, S_handle.key)
-        local e_content = S_fs.crypt(content, keystream)
+    --     local keystream = S_fs.getKeystream(current_pos, #content, path, S_handle.key)
+    --     local e_content = S_fs.crypt(content, keystream)
 
-        O_handle.write(e_content)
-    end
+    --     O_handle.write(e_content)
+    -- end
 
-    S_handle.writeLine = function (text)
+    -- S_handle.writeLine = function (text)
         
-        S_handle.write(text .. "\n")
-    end
+    --     S_handle.write(text .. "\n")
+    -- end
 
-    S_handle.flush = function ()
+    -- S_handle.flush = function ()
         
-    end
+    -- end
 
     return S_handle
 end
 
-print("Before S_fs.open")
-local file, err = assert(S_fs.open("Testing.txt@82893adef889cf2ba4fabdea", "r"))
+local file, err = assert(S_fs.open("Testing.txt", "r+"))
 
 if file == nil then print(err, "crash") end
 
-local out = assert(fs.open("Testing_2.txt@82893adef889cf2ba4fabdea", "wb"))
 
-assert(file)
-print(file.readAll())
-out.write("test")
 
-file.close() 
-out.close()
+file.close()
