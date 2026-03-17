@@ -84,6 +84,81 @@ S_fs.isReadOnly = function (path)
     return false
 end
 
+--- Returns the size of the file in bytes
+--- @param path string
+--- @return integer
+S_fs.getSize = function (path)
+    path = normalize(path)
+    if S_fs.isReadOnly(path) then return O_fs.getSize(path) end
+    local size = O_fs.getSize(path)
+    return math.max(0, size - 12)
+end
+
+--- Returns the size of the file in bytes, includes the prefixed 12 byte nonce
+--- @param path string
+--- @return integer
+S_fs.getRawSize = function (path)
+    return O_fs.getSize(path)
+end
+
+S_fs.delete = function (path)
+    path = normalize(path)
+    if not S_fs.isReadOnly(path) then
+        O_fs.delete(path)
+    else
+        error("Access denied")
+    end
+end
+
+S_fs.move = function (source, destination)
+    source = normalize(source)
+    destination = normalize(destination)
+    if not  S_fs.isReadOnly(destination) then
+        O_fs.move(source, destination)
+    else
+        error("Access denied")
+    end
+end
+
+S_fs.attributes = function (path)
+    path = normalize(path)
+    local att = O_fs.attributes(path)
+    att.isReadOnly = S_fs.isReadOnly(path)
+    return att
+end
+
+S_fs.list = function (path)
+    path = normalize(path)
+    local list = O_fs.list(path)
+    
+    local filtered = {}
+    for _, name in ipairs(list) do
+        if name:match("^%.tmp_") then
+            table.insert(filtered, name)
+        end
+    end
+
+    return filtered
+end
+
+S_fs.exists = function (path)
+    path = normalize(path)
+    if path:match("%.tmp_") then return false end
+    return O_fs.exists(path)
+end
+
+S_fs.find = function(wildcard)
+    local results = O_fs.find(wildcard)
+    local filtered = {}
+    for _, path in ipairs(results) do
+        if not path:match("%.tmp_") then
+            table.insert(filtered, path)
+        end
+    end
+    return filtered
+end
+
+
 ---Open a file for reading/writing
 ---@param path string
 ---@param mode ccTweaked.fs.openMode
@@ -95,7 +170,7 @@ S_fs.open = function(path, mode)
     local isTrucating = mode:match("^w")
     local isWriteable = mode:match("[wa+]")
     local isAppending = mode:match("^a")
-    local isExisting = O_fs.exists(path)
+    local isExisting = S_fs.exists(path)
 
     if path:find("^sfs/") and isWriteable then
         return nil
@@ -109,7 +184,7 @@ S_fs.open = function(path, mode)
 
 
     -- Create a temporary unencrypted file
-    local tmp_path = "os/.tmp_" .. path:gsub("/", "_")
+    local tmp_path = "sfs/.tmp_" .. path:gsub("/", "_")
     local tmp_handle = O_fs.open(tmp_path, "w+b")
 
     local O_handle, err
@@ -207,7 +282,7 @@ S_fs.open = function(path, mode)
         end
 
         ---Flush the file, saving it without closing it
-        S_handle.flush = saveToDisk()
+        S_handle.flush = saveToDisk
 
         ---Close the file
         S_handle.close = function()
@@ -236,6 +311,6 @@ local file, err = assert(S_fs.open("Testing.txt", "r"))
 
 if file == nil then print(err, "crash") end
 
-print(file.readAll())
+print(textutils.serialise(S_fs.attributes("sfs/test.txt")))
 
 file.close()
