@@ -104,7 +104,7 @@ function utils.string_from_hex(hex)
     local str = {}
 
     for i = 1, #hex, 2 do
-        table.insert(str, string.char(tonumber(string.sub(hex, i, i+1))--[[@as integer]]))
+        table.insert(str, string.char(tonumber(string.sub(hex, i, i+1), 16)--[[@as integer]]))
     end
 
     return table.concat(str)

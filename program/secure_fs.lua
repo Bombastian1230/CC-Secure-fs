@@ -1,340 +1,125 @@
+---@diagnostic disable: deprecated
 package.path = package.path .. ";./"
-local chacha20 = require("program.chacha20")
+local chacha20 = require("chacha20")
+local utils = require("utils")
 
 S_fs = {}
-
-local function checkResult(handle, ...)
-    if ... == nil and handle._autoclose and not handle._closed then handle:close() end
-    return ...
+O_fs = {}
+for k, v in pairs(fs) do
+    O_fs[k] = v
 end
 
---- A file handle which can be read or written to.
---
--- @type Handle
-local handleMetatable
-handleMetatable = {
-    __name = "FILE*",
-    __tostring = function(self)
-        if self._closed then
-            return "file (closed)"
-        else
-            local hash = tostring(self._handle):match("table: (%x+)")
-            return "file (" .. hash .. ")"
-        end
-    end,
 
-    __index = {
-        --- Close this file handle, freeing any resources it uses.
-        --
-        -- @treturn[1] true If this handle was successfully closed.
-        -- @treturn[2] nil If this file handle could not be closed.
-        -- @treturn[2] string The reason it could not be closed.
-        -- @throws If this handle was already closed.
-        close = function(self)
-            if type(self) ~= "table" or getmetatable(self) ~= handleMetatable then
-                error("bad argument #1 (FILE expected, got " .. type(self) .. ")", 2)
-            end
-            if self._closed then error("attempt to use a closed file", 2) end
-
-            local handle = self._handle
-            if handle.close then
-                self._closed = true
-                handle.close()
-                return true
-            else
-                return nil, "attempt to close standard stream"
-            end
-        end,
-
-        --- Flush any buffered output, forcing it to be written to the file
-        --
-        -- @throws If the handle has been closed
-        flush = function(self)
-            if type(self) ~= "table" or getmetatable(self) ~= handleMetatable then
-                error("bad argument #1 (FILE expected, got " .. type(self) .. ")", 2)
-            end
-            if self._closed then error("attempt to use a closed file", 2) end
-
-            local handle = self._handle
-            if handle.flush then handle.flush() end
-            return true
-        end,
-
-        --[[- Returns an iterator that, each time it is called, returns a new
-        line from the file.
-
-        This can be used in a for loop to iterate over all lines of a file
-
-        Once the end of the file has been reached, @{nil} will be returned. The file is
-        *not* automatically closed.
-
-        @param ... The argument to pass to @{Handle:read} for each line.
-        @treturn function():string|nil The line iterator.
-        @throws If the file cannot be opened for reading
-        @since 1.3
-
-        @see io.lines
-        @usage Iterate over every line in a file and print it out.
-
-        ```lua
-        local file = io.open("/rom/help/intro.txt")
-        for line in file:lines() do
-          print(line)
-        end
-        file:close()
-        ```
-        ]]
-        lines = function(self, ...)
-            if type(self) ~= "table" or getmetatable(self) ~= handleMetatable then
-                error("bad argument #1 (FILE expected, got " .. type(self) .. ")", 2)
-            end
-            if self._closed then error("attempt to use a closed file", 2) end
-
-            local handle = self._handle
-            if not handle.read then return nil, "file is not readable" end
-
-            local args = table.pack(...)
-            return function()
-                if self._closed then error("file is already closed", 2) end
-                return checkResult(self, self:read(table.unpack(args, 1, args.n)))
-            end
-        end,
-
-        --[[- Reads data from the file, using the specified formats. For each
-        format provided, the function returns either the data read, or `nil` if
-        no data could be read.
-
-        The following formats are available:
-        - `l`: Returns the next line (without a newline on the end).
-        - `L`: Returns the next line (with a newline on the end).
-        - `a`: Returns the entire rest of the file.
-        - ~~`n`: Returns a number~~ (not implemented in CC).
-
-        These formats can be preceded by a `*` to make it compatible with Lua 5.1.
-
-        If no format is provided, `l` is assumed.
-
-        @param ... The formats to use.
-        @treturn (string|nil)... The data read from the file.
-        ]]
-        read = function(self, ...)
-            if type(self) ~= "table" or getmetatable(self) ~= handleMetatable then
-                error("bad argument #1 (FILE expected, got " .. type(self) .. ")", 2)
-            end
-            if self._closed then error("attempt to use a closed file", 2) end
-
-            local handle = self._handle
-            if not handle.read and not handle.readLine then return nil, "Not opened for reading" end
-
-            local n = select("#", ...)
-            local output = {}
-            for i = 1, n do
-                local arg = select(i, ...)
-                local res
-                if type(arg) == "number" then
-                    if handle.read then res = handle.read(arg) end
-                elseif type(arg) == "string" then
-                    local format = arg:gsub("^%*", ""):sub(1, 1)
-
-                    if format == "l" then
-                        if handle.readLine then res = handle.readLine() end
-                    elseif format == "L" and handle.readLine then
-                        if handle.readLine then res = handle.readLine(true) end
-                    elseif format == "a" then
-                        if handle.readAll then res = handle.readAll() or "" end
-                    elseif format == "n" then
-                        res = nil -- Skip this format as we can't really handle it
-                    else
-                        error("bad argument #" .. i .. " (invalid format)", 2)
-                    end
-                else
-                    error("bad argument #" .. i .. " (string expected, got " .. type(arg) .. ")", 2)
-                end
-
-                output[i] = res
-                if not res then break end
-            end
-
-            -- Default to "l" if possible
-            if n == 0 and handle.readLine then return handle.readLine() end
-            return table.unpack(output, 1, n)
-        end,
-
-        --[[- Seeks the file cursor to the specified position, and returns the
-        new position.
-
-        `whence` controls where the seek operation starts, and is a string that
-        may be one of these three values:
-        - `set`: base position is 0 (beginning of the file)
-        - `cur`: base is current position
-        - `end`: base is end of file
-
-        The default value of `whence` is `cur`, and the default value of `offset`
-        is 0. This means that `file:seek()` without arguments returns the current
-        position without moving.
-
-        @tparam[opt] string whence The place to set the cursor from.
-        @tparam[opt] number offset The offset from the start to move to.
-        @treturn number The new location of the file cursor.
-        ]]
-        seek = function(self, whence, offset)
-            if type(self) ~= "table" or getmetatable(self) ~= handleMetatable then
-                error("bad argument #1 (FILE expected, got " .. type(self) .. ")", 2)
-            end
-            if self._closed then error("attempt to use a closed file", 2) end
-
-            local handle = self._handle
-            if not handle.seek then return nil, "file is not seekable" end
-
-            -- It's a tail call, so error positions are preserved
-            return handle.seek(whence, offset)
-        end,
-
-        --[[- Sets the buffering mode for an output file.
-
-        This has no effect under ComputerCraft, and exists with compatility
-        with base Lua.
-        @tparam string mode The buffering mode.
-        @tparam[opt] number size The size of the buffer.
-        @see file:setvbuf Lua's documentation for `setvbuf`.
-        @deprecated This has no effect in CC.
-        ]]
-        setvbuf = function(self, mode, size) end,
-
-        --- Write one or more values to the file
-        --
-        -- @tparam string|number ... The values to write.
-        -- @treturn[1] Handle The current file, allowing chained calls.
-        -- @treturn[2] nil If the file could not be written to.
-        -- @treturn[2] string The error message which occurred while writing.
-        -- @changed 1.81.0 Multiple arguments are now allowed.
-        write = function(self, ...)
-            if type(self) ~= "table" or getmetatable(self) ~= handleMetatable then
-                error("bad argument #1 (FILE expected, got " .. type(self) .. ")", 2)
-            end
-            if self._closed then error("attempt to use a closed file", 2) end
-
-            local handle = self._handle
-            if not handle.write then return nil, "file is not writable" end
-
-            for i = 1, select("#", ...) do
-                local arg = select(i, ...)
-
-                handle.write(arg)
-            end
-            return self
-        end,
-    },
-}
-
-local function make_file(handle)
-    return setmetatable({ _handle = handle }, handleMetatable)
+---Return the nonce used to encrypt a file
+---@param path string
+---@return string
+function S_fs.getNonce(path)
+    local hex = path:match("@([0-9a-fA-F]+)$")
+    return utils.string_from_hex(hex)
 end
 
-local defaultInput = make_file({ readLine = _G.read })
+---Returns the keystream for a specific block of data based on its position in the file
+---@param position integer
+---@param data_size integer
+---@param path string
+---@param key string
+function S_fs.getKeystream(position, data_size, path, key)
+    local nonce = S_fs.getNonce(path)
+    local block_count = math.floor((position) / 64)
+    local block_amount = math.floor((position + data_size) / 64) - block_count + 1
+    local keystream = {}
 
-local defaultOutput = make_file({ write = _G.write })
-
-local defaultError = make_file({
-    write = function(...)
-        local oldColour
-        if term.isColour() then
-            oldColour = term.getTextColour()
-            term.setTextColour(colors.red)
+    for block_count = block_count, block_count + block_amount do
+        local block = chacha20.generate_keystream_block(key, nonce, block_count)
+        for _, word in ipairs(block) do
+            local bytes = utils.bytes_from_int32(word)
+            for _, byte in ipairs(bytes) do
+                table.insert(keystream, byte)
+            end
         end
-        _G.write(...)
-        if term.isColour() then term.setTextColour(oldColour) end
-    end,
-})
-
-local currentInput = defaultInput
-local currentOutput = defaultOutput
-stdin = defaultInput
-stdout = defaultOutput
-stderr = defaultError
-
-function close(file)
-    if file == nil then return currentOutput:close() end
-
-    if type(file) ~= "table" or getmetatable(file) ~= handleMetatable then
-        error("bad argument #1 (FILE expected, got " .. type(file) .. ")", 2)
     end
-    return file:close()
+    
+    local keystream_start = (position) % 64 + 1
+    local keystream_end = keystream_start + data_size - 1
+
+    return { table.unpack(keystream, keystream_start, keystream_end) }
 end
 
-function flush()
-    return currentOutput:flush()
-end
-
-function input(file)
-    if type(file) == "string" then
-        local res, err = open(file, "r")
-        if not res then error(err, 2) end
-        currentInput = res
-    elseif type(file) == "table" and getmetatable(file) == handleMetatable then
-        currentInput = file
-    elseif file ~= nil then
-        error("bad fileument #1 (FILE expected, got " .. type(file) .. ")", 2)
+---En/decrypt the data using the keystream
+---@param data string
+---@param keystream integer[]
+function S_fs.crypt(data, keystream)
+    local crypted = {}
+    for i = 1, #data do
+        local byte = data:byte(i)
+        crypted[i] = bit32.bxor(byte, keystream[i])
     end
 
-    return currentInput
-end
-
-
-function lines(filename, ...)
-    if filename then
-        local ok, err = open(filename, "r")
-        if not ok then error(err, 2) end
-
-        -- We set this magic flag to mark this file as being opened by io.lines and so should be
-        -- closed automatically
-        ok._autoclose = true
-        return ok:lines(...)
-    else
-        return currentInput:lines(...)
-    end
-end
-
-function open(filename, mode)
-
-    local file, err = fs.open(filename, mode or "r")
-    if not file then return nil, err end
-
-    return make_file(file)
+    return string.char(table.unpack(crypted))
 end
 
 --- Return true if the path is mounted to the parrent, the new root folder counts as mounted
 --- @param path string
 --- @return boolean
-function S_fs.isDriveRoot(path)
+S_fs.isDriveRoot = function(path)
     -- Force the root directory to be a mount.
-    return fs.getDir(path) == ".." or fs.getDir(path) == "root" or fs.getDrive(path) ~= fs.getDrive(fs.getDir(path))
+    return O_fs.getDir(path) == ".." or O_fs.getDir(path) == "root" or
+    O_fs.getDrive(path) ~= O_fs.getDrive(O_fs.getDir(path))
 end
 
---- Opens a file
---- @param path any
---- @param mode any
-function S_fs.open(path, mode)
-    if path:match(".+root$") then
-        error("Cannot create/open files/folders called root.")
+---Open a file for reading/writing
+---@param path string
+---@param mode ccTweaked.fs.openMode
+---@return table|nil
+---@return string?
+S_fs.open = function(path, mode)
+    print("Before O_fs.open")
+    local O_handle, err = O_fs.open(path, mode)
+    print("After O_fs.open")
+    if O_handle == nil then return O_handle, err end
+    print("After error check")
+
+    local S_handle = {}
+    for k, v in pairs(O_handle) do
+        S_handle[k] = v
     end
 
-    local handle = io.open(path, mode)
-    os.queueEvent("key request")
-    local _, key = os.pullEvent("key response")
-    handle.key = key
+    os.queueEvent("key_request", "fileopen", path)
+    _, S_handle.key = os.pullEvent("key_response")
 
-    return 
+
+    ---Read the file
+    ---@param count? number
+    ---@return string content The decrypted content of the file
+    S_handle.read = function(count)
+        if count == nil then count = 1 end
+
+        local current_pos = O_handle.seek("cur", 0)
+        local e_content = O_handle.read(count)
+
+        local keystream = S_fs.getKeystream(current_pos, #e_content, path, S_handle.key)
+        utils.print_table_as_hex(keystream, 2)
+        local content = S_fs.crypt(e_content, keystream)
+
+        return content
+    end
+
+    S_handle.readAll = function ()
+        local e_content = O_handle.readAll()
+        local current_pos
+    end
+
+    return S_handle
 end
 
+print("Before S_fs.open")
+local file, err = assert(S_fs.open("Testing.txt@82893adef889cf2ba4fabdea", "r"))
 
-----ReadWriteHandle overides
---- Read file 
---- @param count? integer
-function S_fs.ReadWriteHandle:read(count)
-    if count == nil then count = 1 end
+if file == nil then print(err, "crash") end
 
+local out = assert(fs.open("Testing_2.txt@82893adef889cf2ba4fabdea", "w"))
 
-end
+out.write(file.read(7))
 
-return S_fs
+file.close()    
+out.close()
