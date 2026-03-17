@@ -9,14 +9,8 @@ for k, v in pairs(fs) do
     O_fs[k] = v
 end
 
-
----Return the nonce used to encrypt a file
----@param path string
----@return string
-function S_fs.getNonce(path)
-    local hex = path:match("@([0-9a-fA-F]+)$")
-    return utils.string_from_hex(hex)
-end
+---@type string
+local encryption_key = nil
 
 ---Returns the keystream for a specific block of data based on its position in the file
 ---@param position integer
@@ -74,34 +68,43 @@ end
 ---@return string?
 S_fs.open = function(path, mode)
     local S_handle = {}
-
+    print("in open")
     if not O_fs.exists(path) then
         S_handle.nonce = chacha20.generate_nonce()
     end
 
-    os.queueEvent("key_request", "fileopen", path)
-    _, S_handle.key = os.pullEvent("key_response")
-
-    local O_handle, err = O_fs.open(path, mode)
+    -- If the mode is write or append try to create the file
+    if mode:match("^w.?.?") or mode:match("^a.?") then
+        local create_handle, err = O_fs.open(path, "ab")
+        if create_handle == nil then return create_handle, err end
+        
+        create_handle.close()
+    end
+    
+    local O_handle, err = O_fs.open(path, "r+b")
     if O_handle == nil then return O_handle, err end
-
+    
     for k, v in pairs(O_handle) do
         S_handle[k] = v
     end
-
+    
     if S_handle.nonce == nil then
         S_handle.nonce = O_handle.read(12)
     end
+    
+    print(S_handle.nonce)
 
     -- Create a temporary unencrypted file
-    local tmp_handle = O_fs.open("os/.tmp_" .. string.gsub(path, "\\", "_"), "r+")
+    local tmp_handle = O_fs.open("os/.tmp_" .. string.gsub(path, "\\", "_"), "w+b")
     print("os/.tmp_" .. string.gsub(path, "\\", "_"))
-
+    for i = 1, O_fs.getSize(path), 4096 do
+        local chunk = O_handle.read(4096)
+        
+        tmp_handle.write(chunk)
+    end
 
     
 
-
-    print(S_handle.nonce)
 
     -- ---Read the file
     -- ---@param count? number
@@ -166,7 +169,10 @@ S_fs.open = function(path, mode)
     return S_handle
 end
 
-local file, err = assert(S_fs.open("Testing.txt", "r+"))
+encryption_key = "\104\147\125\51\76\33\131\137\146\36\149\132\182\20\37\180\47\233\201\129\180\60\36\43\189\30\125\174\149\242\30\88"
+print(encryption_key)
+
+local file, err = assert(S_fs.open("Testing.txt", "w"))
 
 if file == nil then print(err, "crash") end
 

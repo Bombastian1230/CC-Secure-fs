@@ -8,6 +8,8 @@
         "os": "disable"
     },
     "Lua.workspace.checkThirdParty": false,
-    "Lua.diagnostics.globals": [
-    ]
+    "Lua.diagnostics.globals": [],
+    "files.readonlyInclude": {
+        "rom/**": true
+    }
 }
