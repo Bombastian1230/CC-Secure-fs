@@ -73,6 +73,10 @@ S_fs.open = function(path, mode)
         S_handle.nonce = chacha20.generate_nonce()
     end
 
+    -- Create a temporary unencrypted file
+    local tmp_handle = O_fs.open("os/.tmp_" .. string.gsub(path, "\\", "_"), "w+b")
+    print("os/.tmp_" .. string.gsub(path, "\\", "_"))
+
     -- If the mode is write or append try to create the file
     if mode:match("^w.?.?") or mode:match("^a.?") then
         local create_handle, err = O_fs.open(path, "ab")
@@ -90,81 +94,92 @@ S_fs.open = function(path, mode)
     
     if S_handle.nonce == nil then
         S_handle.nonce = O_handle.read(12)
+
+        for i = 1, O_fs.getSize(path), 4096 do
+            local e_chunk = O_handle.read(4096)
+
+            local chunk = chacha20.crypt(e_chunk, encryption_key, S_handle.nonce)
+            
+            tmp_handle.write(chunk)
+        end
     end
     
     print(S_handle.nonce)
 
-    -- Create a temporary unencrypted file
-    local tmp_handle = O_fs.open("os/.tmp_" .. string.gsub(path, "\\", "_"), "w+b")
-    print("os/.tmp_" .. string.gsub(path, "\\", "_"))
-    for i = 1, O_fs.getSize(path), 4096 do
-        local chunk = O_handle.read(4096)
-        
-        tmp_handle.write(chunk)
+    ---Read the file content 'count' amount of bytes, defaults to 1
+    ---@param count? number
+    ---@return string content The content of the file
+    S_handle.read = function (count)
+        if not mode:match("b") then
+            count = 1
+        end
+        return tmp_handle.read(count)
+    end
+    ---Read all remaining bytes of the file
+    ---@return string
+    S_handle.readAll = function ()
+        return tmp_handle.readAll()
+    end
+    ---Read the one line of the file
+    ---@param withTrailing boolean
+    ---@return string content 
+    S_handle.readLine = function (withTrailing)
+        return tmp_handle.readLine(withTrailing)
+    end
+    ---Write to the file using either a byte or string
+    ---@param ... string|integer
+    S_handle.write = function (...)
+        tmp_handle.write(...)
+    end 
+    ---Write to the file using a string with a newline
+    S_handle.writeLine = function (line)
+        tmp_handle.writeLine(line)
     end
 
-    
+    ---Flush the file, saving it without closing it
+    S_handle.flush = function ()
+        local tmp_position = tmp_handle.seeK("cur", 0)
+        local O_position = O_handle.seeK("cur", 0)
 
+        local new_nonce = chacha20.generate_nonce()
+        local file_length = tmp_handle.seek("end", 0)
 
-    -- ---Read the file
-    -- ---@param count? number
-    -- ---@return string content The decrypted content of the file
-    -- S_handle.read = function(count)
-    --     if count == nil then count = 1 end
+        tmp_handle.seek("set", 0)
+        O_handle.seek("set", 0)
+        O_handle.write(new_nonce)
 
-    --     local current_pos = O_handle.seek("cur", 0)
-    --     local e_content = O_handle.read(count)
+        for i = 1, file_length, 4096 do
+            local chunk = tmp_handle.read(4096)
 
-    --     local keystream = S_fs.getKeystream(current_pos, #e_content, path, S_handle.key)
-    --     local content = S_fs.crypt(e_content, keystream)
+            local e_chunk = chacha20.crypt(chunk, encryption_key, new_nonce)
 
-    --     return content
-    -- end
+            O_handle.write(e_chunk)
+        end
 
-    -- S_handle.readAll = function ()
-    --     local current_pos = O_handle.seek("cur", 0)
-    --     local e_content = O_handle.readAll()
+        O_handle.flush()
 
-    --     local keystream = S_fs.getKeystream(current_pos, #e_content, path, S_handle.key)
-    --     local content = S_fs.crypt(e_content, keystream)
+        tmp_handle.seek("set", tmp_position)
+        O_handle.seek("set", O_position)
+    end
 
-    --     return content
-    -- end
+    S_handle.close = function ()
+        local new_nonce = chacha20.generate_nonce()
+        local file_length = tmp_handle.seek("end", 0)
 
-    -- S_handle.readLine = function (withTrailing)
-    --     local current_pos = O_handle.seek("cur", 0)
-    --     local e_content = O_handle.readLine(withTrailing)
+        tmp_handle.seek("set", 0)
+        O_handle.seek("set", 0)
+        O_handle.write(new_nonce)
 
-    --     local keystream = S_fs.getKeystream(current_pos, #e_content, path, S_handle.key)
-    --     local content = S_fs.crypt(e_content, keystream)
+        for i = 1, file_length, 4096 do
+            local chunk = tmp_handle.read(4096)
 
-    --     return content
-    -- end
+            local e_chunk = chacha20.crypt(chunk, encryption_key, new_nonce)
 
-    -- S_handle.write = function (...)
-    --     local content
-    --     if type(...) == "string" then
-    --         content = ...
-    --     elseif type(...) == "number" then
-    --         content = string.char(...)
-    --     end
+            O_handle.write(e_chunk)
+        end
 
-    --     local current_pos = O_handle.seek("cur", 0)
-        
-    --     local keystream = S_fs.getKeystream(current_pos, #content, path, S_handle.key)
-    --     local e_content = S_fs.crypt(content, keystream)
-
-    --     O_handle.write(e_content)
-    -- end
-
-    -- S_handle.writeLine = function (text)
-        
-    --     S_handle.write(text .. "\n")
-    -- end
-
-    -- S_handle.flush = function ()
-        
-    -- end
+        O_handle.close()
+    end
 
     return S_handle
 end
