@@ -98,15 +98,54 @@ S_fs.open = function(path, mode)
         local e_content = O_handle.read(count)
 
         local keystream = S_fs.getKeystream(current_pos, #e_content, path, S_handle.key)
-        utils.print_table_as_hex(keystream, 2)
         local content = S_fs.crypt(e_content, keystream)
 
         return content
     end
 
     S_handle.readAll = function ()
+        local current_pos = O_handle.seek("cur", 0)
         local e_content = O_handle.readAll()
-        local current_pos
+
+        local keystream = S_fs.getKeystream(current_pos, #e_content, path, S_handle.key)
+        local content = S_fs.crypt(e_content, keystream)
+
+        return content
+    end
+
+    S_handle.readLine = function (withTrailing)
+        local current_pos = O_handle.seek("cur", 0)
+        local e_content = O_handle.readLine(withTrailing)
+
+        local keystream = S_fs.getKeystream(current_pos, #e_content, path, S_handle.key)
+        local content = S_fs.crypt(e_content, keystream)
+
+        return content
+    end
+
+    S_handle.write = function (...)
+        local content
+        if type(...) == "string" then
+            content = ...
+        elseif type(...) == "number" then
+            content = string.char(...)
+        end
+
+        local current_pos = O_handle.seek("cur", 0)
+        
+        local keystream = S_fs.getKeystream(current_pos, #content, path, S_handle.key)
+        local e_content = S_fs.crypt(content, keystream)
+
+        O_handle.write(e_content)
+    end
+
+    S_handle.writeLine = function (text)
+        
+        S_handle.write(text .. "\n")
+    end
+
+    S_handle.flush = function ()
+        
     end
 
     return S_handle
@@ -117,9 +156,11 @@ local file, err = assert(S_fs.open("Testing.txt@82893adef889cf2ba4fabdea", "r"))
 
 if file == nil then print(err, "crash") end
 
-local out = assert(fs.open("Testing_2.txt@82893adef889cf2ba4fabdea", "w"))
+local out = assert(fs.open("Testing_2.txt@82893adef889cf2ba4fabdea", "wb"))
 
-out.write(file.read(7))
+assert(file)
+print(file.readAll())
+out.write("test")
 
-file.close()    
+file.close() 
 out.close()
