@@ -55,10 +55,11 @@ end
 --- Return true if the path is mounted to the parrent, the new root folder counts as mounted
 --- @param path string
 --- @return boolean
-S_fs.isDriveRoot = function(path)
-    -- Force the root directory to be a mount.
-    return O_fs.getDir(path) == ".." or O_fs.getDir(path) == "root" or
-        O_fs.getDrive(path) ~= O_fs.getDrive(O_fs.getDir(path))
+S_fs.isReadOnly = function (path)
+    if path:find("^rom/") or path:find("^sfs/") then
+        return true
+    end
+    return false
 end
 
 ---Open a file for reading/writing
@@ -67,12 +68,20 @@ end
 ---@return table|nil
 ---@return string?
 S_fs.open = function(path, mode)
-    local S_handle = {}
-
     local isTrucating = mode:match("^w")
     local isWriteable = mode:match("[wa+]")
     local isAppending = mode:match("^a")
     local isExisting = O_fs.exists(path)
+
+    if path:find("^sfs/") and isWriteable then
+        return nil
+    end
+    if S_fs.isReadOnly(path) then
+        return O_fs.open(path, mode)
+    end
+
+    local S_handle = {}
+
 
 
     -- Create a temporary unencrypted file
