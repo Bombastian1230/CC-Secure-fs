@@ -12,6 +12,27 @@ end
 ---@type string
 local encryption_key = nil
 
+---Normalize a path
+---@param path string
+local function normalize(path)
+    path = path:gsub("\\", "/"):gsub("^/", ""):gsub("/$", "")
+
+    local parts = {}
+
+    for part in path:gmatch("[^/]+") do
+        if part == ".." then
+            if #parts > 0 and parts[#parts] ~= ".." then
+                table.remove(parts)
+            end
+        elseif part == "." then -- Do nothinf
+        else
+            table.insert(parts, part)
+        end
+    end
+
+    return table.concat(parts, "/")
+end
+
 ---Returns the keystream for a specific block of data based on its position in the file
 ---@param position integer
 ---@param data_size integer
@@ -56,6 +77,7 @@ end
 --- @param path string
 --- @return boolean
 S_fs.isReadOnly = function (path)
+    path = normalize(path)
     if path:find("^rom/") or path:find("^sfs/") then
         return true
     end
@@ -68,6 +90,8 @@ end
 ---@return table|nil
 ---@return string?
 S_fs.open = function(path, mode)
+    path = normalize(path)
+
     local isTrucating = mode:match("^w")
     local isWriteable = mode:match("[wa+]")
     local isAppending = mode:match("^a")
@@ -85,7 +109,7 @@ S_fs.open = function(path, mode)
 
 
     -- Create a temporary unencrypted file
-    local tmp_path = "os/.tmp_" .. string.gsub(path, "\\", "_")
+    local tmp_path = "os/.tmp_" .. path:gsub("/", "_")
     local tmp_handle = O_fs.open(tmp_path, "w+b")
 
     local O_handle, err
