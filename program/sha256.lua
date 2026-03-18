@@ -15,12 +15,9 @@ local K = {
 ---@param message string
 ---@return integer[]
 local function generate_message_block(message)
-    local message_block = {}
-    local message_length = 0
-    for i = 1, #message do
-        table.insert(message_block, string.byte(message, i))
-        message_length = message_length + 8
-    end
+    local message_block = { string.byte(message, 1, #message) }
+    local message_length = #message * 8
+
     table.insert(message_block, 0x80)
 
     local pad_by = (64 - #message_block % 64) - 8
