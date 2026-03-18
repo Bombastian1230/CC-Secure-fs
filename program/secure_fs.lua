@@ -175,13 +175,11 @@ S_fs.open = function(path, mode)
     if path:find("^sfs/") and isWriteable then
         return nil
     end
-    if S_fs.isReadOnly(path) then
+    if S_fs.isReadOnly(path) or path:match("startup%.lua") then
         return O_fs.open(path, mode)
     end
 
     local S_handle = {}
-
-
 
     -- Create a temporary unencrypted file
     local tmp_path = "sfs/.tmp_" .. path:gsub("/", "_")
@@ -197,7 +195,7 @@ S_fs.open = function(path, mode)
 
         while true do
             local e_chunk = O_handle.read(4096)
-            if not e_chunk then break end
+            if e_chunk == nil then break end
 
             local chunk = chacha20.crypt(e_chunk, encryption_key, S_handle.nonce)
             tmp_handle.write(chunk)
@@ -263,19 +261,17 @@ S_fs.open = function(path, mode)
             local O_position = O_handle.seek("cur", 0)
 
             local new_nonce = chacha20.generate_nonce()
-            local file_length = tmp_handle.seek("end", 0)
 
             tmp_handle.seek("set", 0)
             O_handle.seek("set", 0)
             O_handle.write(new_nonce)
-
-            for i = 1, file_length, 4096 do
+    
+            while true do
                 local chunk = tmp_handle.read(4096)
+                if chunk == nil then break end
 
-                local e_chunk = chacha20.crypt(chunk, encryption_key, new_nonce)
-
-                O_handle.write(e_chunk)
-            end
+                O_handle.write(chunk)
+            end        
 
             tmp_handle.seek("set", tmp_position)
             O_handle.seek("set", O_position)
@@ -305,8 +301,8 @@ S_fs.open = function(path, mode)
 end
 
 S_fs.copy = function (source, destination)
-    source = normalize(source)
-    destination = normalize(destination)
+    source = O_fs.combine(source)
+    destination = O_fs.combine(destination)
 
     if not S_fs.exists(source) then
         error(source .. ": No such file")
@@ -315,7 +311,18 @@ S_fs.copy = function (source, destination)
         error("Access denied")
     end
 
-    local source_file = S_fs.open(source, "rb")
+    local source_file = assert(S_fs.open(source, "rb"))
+    local destination_file = assert(S_fs.open(destination, "wb"))
+
+    while true do
+        local chunk = source_file.read(4096)
+        if chunk == nil then break end
+
+        destination_file.write(chunk)
+    end
+
+    source_file.close()
+    destination_file.close()
 end
 
 
