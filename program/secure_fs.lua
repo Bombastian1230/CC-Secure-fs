@@ -67,7 +67,6 @@ end
 --- @param path string
 --- @return integer
 S_fs.getSize = function (path)
-    path = normalize(path)
     path = O_fs.combine(path)
     if S_fs.isReadOnly(path) then return O_fs.getSize(path) end
     local size = O_fs.getSize(path)
@@ -91,6 +90,8 @@ S_fs.delete = function (path)
 end
 
 S_fs.move = function (source, destination)
+    source = O_fs.combine(source)
+    destination = O_fs.combine(destination)
     if not  S_fs.isReadOnly(destination) then
         O_fs.move(source, destination)
     else
@@ -99,13 +100,14 @@ S_fs.move = function (source, destination)
 end
 
 S_fs.attributes = function (path)
+    path = O_fs.combine(path)
     local att = O_fs.attributes(path)
     att.isReadOnly = S_fs.isReadOnly(path)
     return att
 end
 
 S_fs.list = function (path)
-    path = normalize(path)
+    path = O_fs.combine(path)
     local list = O_fs.list(path)
     
     local filtered = {}
@@ -119,7 +121,7 @@ S_fs.list = function (path)
 end
 
 S_fs.exists = function (path)
-    path = normalize(path)
+    path = O_fs.combine(path)
     if path:match("%.tmp_") then return false end
     return O_fs.exists(path)
 end
@@ -142,7 +144,8 @@ end
 ---@return table|nil
 ---@return string?
 S_fs.open = function(path, mode)
-    path = normalize(path)
+    path = O_fs.combine(path)
+    ---@cast path string
 
     local isTrucating = mode:match("^w")
     local isWriteable = mode:match("[wa+]")
