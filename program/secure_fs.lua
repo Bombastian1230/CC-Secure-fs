@@ -12,27 +12,6 @@ end
 ---@type string
 local encryption_key = nil
 
----Normalize a path
----@param path string
-local function normalize(path)
-    path = path:gsub("\\", "/"):gsub("^/", ""):gsub("/$", "")
-
-    local parts = {}
-
-    for part in path:gmatch("[^/]+") do
-        if part == ".." then
-            if #parts > 0 and parts[#parts] ~= ".." then
-                table.remove(parts)
-            end
-        elseif part == "." then -- Do nothinf
-        else
-            table.insert(parts, part)
-        end
-    end
-
-    return table.concat(parts, "/")
-end
-
 ---Returns the keystream for a specific block of data based on its position in the file
 ---@param position integer
 ---@param data_size integer
@@ -77,7 +56,7 @@ end
 --- @param path string
 --- @return boolean
 S_fs.isReadOnly = function (path)
-    path = normalize(path)
+    path = O_fs.combine(path)
     if path:find("^rom/") or path:find("^sfs/") then
         return true
     end
@@ -89,6 +68,7 @@ end
 --- @return integer
 S_fs.getSize = function (path)
     path = normalize(path)
+    path = O_fs.combine(path)
     if S_fs.isReadOnly(path) then return O_fs.getSize(path) end
     local size = O_fs.getSize(path)
     return math.max(0, size - 12)
@@ -102,7 +82,7 @@ S_fs.getRawSize = function (path)
 end
 
 S_fs.delete = function (path)
-    path = normalize(path)
+    path = O_fs.combine(path)
     if not S_fs.isReadOnly(path) then
         O_fs.delete(path)
     else
@@ -111,8 +91,6 @@ S_fs.delete = function (path)
 end
 
 S_fs.move = function (source, destination)
-    source = normalize(source)
-    destination = normalize(destination)
     if not  S_fs.isReadOnly(destination) then
         O_fs.move(source, destination)
     else
@@ -121,7 +99,6 @@ S_fs.move = function (source, destination)
 end
 
 S_fs.attributes = function (path)
-    path = normalize(path)
     local att = O_fs.attributes(path)
     att.isReadOnly = S_fs.isReadOnly(path)
     return att
