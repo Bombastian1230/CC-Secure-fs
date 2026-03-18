@@ -29,4 +29,22 @@ function pbkdf2.derive(password, salt, iterations)
     return T
 end
 
+-- function pbkdf2.speed_test(pass, s)
+--     local start = os.epoch("utc")
+--     local count = 0
+
+--     local U = hmac.sign(pass, s .. "\0\0\0\1")
+--     local T = U
+--     while os.epoch("utc") - start < 1000 do
+--         for i = 1, 100 do
+--             U = hmac.sign(pass, U)
+--             T = xor_strings(T, U)
+--         end
+--         count = count + 100
+--     end
+--     print("Iterations per second: " .. count)
+-- end
+-- 
+-- Result: 500 iterations/second
+
 return pbkdf2
