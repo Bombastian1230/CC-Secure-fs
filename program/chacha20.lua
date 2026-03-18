@@ -98,10 +98,11 @@ end
 ---@param key string
 ---@param nonce string
 ---@param length integer
+---@param initial_block_count integer
 ---@return integer[] keystream
-local function generate_keystream(key, nonce, length)
+local function generate_keystream(key, nonce, length, initial_block_count)
     local keystream = {}
-    for block_count = 1, math.ceil(length / 64) do
+    for block_count = initial_block_count, math.ceil(length / 64) + initial_block_count do
         local block = generate_keystream_block(key, nonce, block_count)
 
         for _, word in ipairs(block) do
@@ -119,12 +120,13 @@ end
 ---@param plaintext string The text to encrypt
 ---@param key string A 32 character long string
 ---@param nonce? string A random string 12 bytes long, if unspecified automaticaly generated.
+---@param block_count? integer The block count to start on
 ---@return string ciphertext The encrypted text
 ---@return string nonce The nonce used to encrypt the text
-local function encrypt(plaintext, key, nonce)
+local function encrypt(plaintext, key, nonce, block_count)
     if nonce == nil then nonce = generate_nonce() end
 
-    local keystream = generate_keystream(key, nonce, #plaintext)
+    local keystream = generate_keystream(key, nonce, #plaintext, block_count or 0)
 
     local cipherbytes = {}
     for i = 1, #plaintext do
