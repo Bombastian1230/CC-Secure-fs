@@ -39,7 +39,7 @@ function hmac_sha256.sign(s_key, message)
     local inner_hash = utils.string_from_hex(sha256.hash(inner_data))
 
     local outer_data = table.concat(S_o) .. inner_hash
-    return sha256.hash(outer_data)
+    return utils.string_from_hex(sha256.hash(outer_data))
 end
 
 return hmac_sha256
