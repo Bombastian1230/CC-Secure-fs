@@ -115,6 +115,8 @@ local function hash(message)
         local chunk = {table.unpack(message_block, i, i+63)}
         
         hash_values = chunk_loop(chunk, hash_values)
+
+        utils.yield(8, i)
     end
 
     local hash_parts = {}

@@ -98,6 +98,8 @@ local function generate_keystream(key, nonce, length, initial_block_count)
                 table.insert(keystream, byte)
             end
         end
+
+        utils.yield(10, block_count)
     end
 
     return keystream
@@ -122,6 +124,8 @@ local function encrypt(plaintext, key, nonce, block_count)
     for i = 1, #plaintext do
         local plainbyte = string.byte(string.sub(plaintext, i))
         table.insert(cipherbytes, bit32.bxor(keystream[i], plainbyte))
+
+        utils.yield(4096, i)
     end
 
     return string.char(table.unpack(cipherbytes)), nonce
