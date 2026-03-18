@@ -125,9 +125,16 @@ function utils.split_by_char(str, char)
 end
 
 ---Yields exection temporaraly to prevent "To long without yielding" errors
-function utils.yield()
-    os.queueEvent("yield")
-    os.pullEvent("yeild")
+---@param yeild_on integer? What iterations to yield on, 1 is every, 2 every other and so on. Defaults to 1
+---@param iteration integer? The current iteration
+function utils.yield(yeild_on, iteration)
+    if yeild_on == nil then yeild_on = 1 end
+    if iteration == nil then iteration = 1 end
+
+    if iteration % yeild_on == 0 then
+        os.queueEvent("yield")
+        os.pullEvent("yeild")
+    end
 end
 
 return utils
