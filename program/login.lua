@@ -18,14 +18,11 @@ print([[
                                                 \______/               
 ]])
 
-local hashed_pass_file = assert(fs.open("sFs/secrets.txt", "r"))
-local hashed_pass = hashed_pass_file.read(32)
-hashed_pass_file.close()
-
-
-
 local iterations = settings.get("sFs.iterations", 10000)
 local salt = settings.get("sFs.salt", "OooooO Spoooky salt,its going to")
+
+local hashed_pass_file = assert(fs.open("sFs/secrets.txt", "r"))
+local hashed_pass = hashed_pass_file.read(32)
 
 local password
 if settings.get("sFs.auto_login", false) then
@@ -57,15 +54,20 @@ local function basic_check(pass)
     return true
 end
 
+local function full_check(pass)
+    
+end
+
 if password == nil then
     print(string.format("Type password carefully, it will take around %d seconds to verify", (iterations * 2) / 1000))
 
     local startX, startY = term.getCursorPos()
     
-    local input_pass
     while true do
+        -- Basic password check
+        ::fail::
         term.write("Password: ")
-        input_pass = read()
+        local input_pass = read()
         local success, reason = basic_check(input_pass)
 
         if success then
@@ -80,10 +82,14 @@ if password == nil then
 
             term.setTextColor(colors.white)
             term.clearLine()
+            goto fail
+        end
+
+        -- Full password check
+        if pbkdf2.derive(input_pass, salt, iterations) == hashed_pass then
+            -- TODO: read encrypted master key from secrets.txt and decrypt it
         end
     end
-
-    password = input_pass
 end
 
-
+hashed_pass_file.close()
