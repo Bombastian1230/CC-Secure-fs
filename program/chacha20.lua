@@ -1,5 +1,4 @@
 local utils = require("utils")
-local crypto = require("crypto")
 
 ---Generate the matrix state
 ---@param key string A 32 character long string
@@ -112,7 +111,10 @@ end
 ---@return string ciphertext The encrypted text
 ---@return string nonce The nonce used to encrypt the text
 local function encrypt(plaintext, key, nonce, block_count)
-    if nonce == nil then nonce = crypto.random_bytes(12) end
+    if nonce == nil then
+        local crypto = require("crypto")
+        nonce = crypto.random_bytes(12)
+    end
 
     local keystream = generate_keystream(key, nonce, #plaintext, block_count or 0)
 
@@ -125,5 +127,9 @@ local function encrypt(plaintext, key, nonce, block_count)
     return string.char(table.unpack(cipherbytes)), nonce
 end
 
-return { crypt = encrypt, generate_keystream = generate_keystream, generate_keystream_block =
-generate_keystream_block }
+return {
+    crypt = encrypt,
+    generate_keystream = generate_keystream,
+    generate_keystream_block =
+        generate_keystream_block
+}
