@@ -308,11 +308,3 @@ end
 
 encryption_key =
 "\104\147\125\51\76\33\131\137\146\36\149\132\182\20\37\180\47\233\201\129\180\60\36\43\189\30\125\174\149\242\30\88"
-
-local file, err = assert(S_fs.open("Testing.txt", "r"))
-
-if file == nil then print(err, "crash") end
-
-print(textutils.serialise(S_fs.attributes("sfs/test.txt")))
-
-file.close()
