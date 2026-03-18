@@ -1,8 +1,5 @@
 local chacha20 = require("chacha20")
-local sha256 = require("sha256")
 local utils = require("utils")
-
-print("DEBUG: Module Loaded")
 
 local crypto = {}
 
