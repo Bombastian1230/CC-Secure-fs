@@ -128,12 +128,12 @@ end
 ---@param yeild_on integer? What iterations to yield on, 1 is every, 2 every other and so on. Defaults to 1
 ---@param iteration integer? The current iteration
 function utils.yield(yeild_on, iteration)
-    if yeild_on == nil then yeild_on = 1 end
-    if iteration == nil then iteration = 1 end
+    yeild_on = yeild_on or 1
+    iteration = iteration or 0
 
     if iteration % yeild_on == 0 then
         os.queueEvent("yield")
-        os.pullEvent("yeild")
+        os.pullEvent("yield")
     end
 end
 
