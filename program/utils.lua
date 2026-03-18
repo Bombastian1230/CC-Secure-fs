@@ -124,4 +124,10 @@ function utils.split_by_char(str, char)
     return split
 end
 
+---Yields exection temporaraly to prevent "To long without yielding" errors
+function utils.yield()
+    os.queueEvent("yield")
+    os.pullEvent("yeild")
+end
+
 return utils
