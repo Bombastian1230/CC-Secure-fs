@@ -16,7 +16,7 @@ end
 ---@return number
 function utils.add32(...)
     local sum = 0
-    local args = {...}
+    local args = { ... }
     for _, number in ipairs(args) do
         sum = bit32.band((sum + number), 0xffffffff)
     end
@@ -52,7 +52,7 @@ end
 ---@param num integer
 ---@return table
 function utils.bytes_from_int32(num)
-    return {bit32.extract(num, 0, 8), bit32.extract(num, 8, 8), bit32.extract(num, 16, 8), bit32.extract(num, 24, 8)}
+    return { bit32.extract(num, 0, 8), bit32.extract(num, 8, 8), bit32.extract(num, 16, 8), bit32.extract(num, 24, 8) }
 end
 
 ---Convert an integer into a hex string padded by "pad" using 0s
@@ -78,7 +78,7 @@ end
 ---@return ...
 function utils.pullEventOverride(event)
     repeat
----@diagnostic disable-next-line: lowercase-global
+        ---@diagnostic disable-next-line: lowercase-global
         event_new, data = os.pullEventRaw(event)
     until event_new ~= "terminate"
 
@@ -104,7 +104,7 @@ function utils.string_from_hex(hex)
     local str = {}
 
     for i = 1, #hex, 2 do
-        table.insert(str, string.char(tonumber(string.sub(hex, i, i+1), 16)--[[@as integer]]))
+        table.insert(str, string.char(tonumber(string.sub(hex, i, i + 1), 16) --[[@as integer]]))
     end
 
     return table.concat(str)
