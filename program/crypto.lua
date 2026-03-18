@@ -36,7 +36,7 @@ end
 
 ---Generate a cryptograficly secure number
 ---@param length integer How many bytes (characters) long the string should be
-function crypto.crypto_random_bytes(length)
+function crypto.random_bytes(length)
     if settings.get("crypto.use_random_org", false) then
         if state.pool_key == nil or os.epoch("utc") - state.pool_key_gen_time > 600000 then
             local new_key = get_secure_bytes(32)
@@ -56,7 +56,7 @@ function crypto.crypto_random_bytes(length)
 
     ::failsafe::
     -- TODO: a backup prng
-    return nil
+    error("Couldn't generate number")
 end
 
 return crypto
