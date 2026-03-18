@@ -1,3 +1,4 @@
+local crypto = require "crypto"
 ---@diagnostic disable: deprecated
 package.path = package.path .. ";./"
 local chacha20 = require("chacha20")
@@ -191,7 +192,7 @@ S_fs.open = function(path, mode)
         O_handle, err = O_fs.open(path, "w+b")
         if O_handle == nil then return O_handle, err end
 
-        S_handle.nonce = chacha20.generate_nonce()
+        S_handle.nonce = crypto.random_bytes(12)
     end
 
     for k, v in pairs(O_handle) do
@@ -240,7 +241,7 @@ S_fs.open = function(path, mode)
             local tmp_position = tmp_handle.seek("cur", 0)
             local O_position = O_handle.seek("cur", 0)
 
-            local new_nonce = chacha20.generate_nonce()
+            local new_nonce = crypto.random_bytes(12)
 
             tmp_handle.seek("set", 0)
             O_handle.seek("set", 0)
