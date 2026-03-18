@@ -307,5 +307,9 @@ S_fs.copy = function (source, destination)
 end
 
 
-encryption_key =
-"\104\147\125\51\76\33\131\137\146\36\149\132\182\20\37\180\47\233\201\129\180\60\36\43\189\30\125\174\149\242\30\88"
+S_fs.init_key = function (key)
+    encryption_key = key
+    S_fs.init_key = nil
+end
+
+return S_fs
