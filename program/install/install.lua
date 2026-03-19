@@ -83,8 +83,12 @@ local function ask(question, error, blit_fg, blit_bg)
     local question_lines = cc_strings.wrap(question)
     local blit_fg_lines = cc_strings.wrap(blit_fg)
     local blit_bg_lines = cc_strings.wrap(blit_bg)
-    for i = 1, #question_lines do
-        term.blit(question_lines[i], blit_fg_lines[i], blit_bg_lines[i])
+    -- print(question_lines[1])
+    -- print(blit_fg_lines[1])
+    -- print(blit_bg_lines[1])
+    for i = 1, 1 do
+        print(#question_lines[i], blit_fg_lines[i])
+        -- term.blit(question_lines[i], blit_fg_lines[i], blit_bg_lines[i])
     end
 
     write("\n> ")
@@ -105,9 +109,27 @@ while true do
     else break end
 end
 
+local prompt = string.format("This computers password will be: %s, Is this correct? (Y/n)", password)
+local blit_fg = "000000000000000000000000000000000" .. string.rep("9", #password) .. "000000000000000000222222"
 local agree = ""
+local valid_answers = {
+    Y = true,
+    y = true,
+    N = true,
+    n = true
+}
 local error
 while true do
-    agree = ask(string.format("This computers password will be: %s, \nIs this correct? (Y/n)", password), error, "000000000000000000000000000000000")
+
+    agree = ask(prompt, error, blit_fg)
+
+    if not valid_answers[agree] then
+        error = agree " is not a valid response"
+    else
+        break
+    end
 end
 
+if agree:lower() == "n" then
+    goto redo_pass
+end
