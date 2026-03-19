@@ -1,5 +1,5 @@
-local sha256 = require "sha256"
-local utils = require "utils"
+local sha256 = require "sFs.sha256"
+local utils = require "sFs.utils"
 
 local hmac_sha256 = {}
 

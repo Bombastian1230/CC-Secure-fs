@@ -1,8 +1,6 @@
-local crypto = require "crypto"
----@diagnostic disable: deprecated
-package.path = package.path .. ";./"
-local chacha20 = require("chacha20")
-local utils = require("utils")
+local crypto = require "sFs.crypto"
+local chacha20 = require("sFs.chacha20")
+local utils = require("sFs.utils")
 
 S_fs = {}
 O_fs = {}

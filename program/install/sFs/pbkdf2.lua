@@ -1,5 +1,5 @@
-local utils = require "utils"
-local hmac = require "hmac_sha256"
+local utils = require "sFs.utils"
+local hmac = require "sFs.hmac_sha256"
 
 local pbkdf2 = {}
 
@@ -19,8 +19,9 @@ end
 ---@param password string The password
 ---@param salt string The salt
 ---@param iterations integer How many iterations do do
+---@param progress_message string The progress message to display before the procentage and progress bar
 ---@return string
-function pbkdf2.derive(password, salt, iterations)
+function pbkdf2.derive(password, salt, iterations, progress_message)
     local U = hmac.sign(password, salt .. "\0\0\0\1")
     local T = U
 
@@ -32,36 +33,22 @@ function pbkdf2.derive(password, salt, iterations)
 
         utils.yield(500, i)
 
-        if i % 500 == 0 then
+        if i % 500 == 0 or i == iterations - 1 then
             term.setCursorPos(startX, startY)
             term.clearLine()
 
-            term.write("Hashing password" .. string.rep(".", (i / 500) % 4))
+            local progress_update = string.format("%s ", progress_message)
+            term.write(progress_update)
+
+            local bar_x, bar_y = term.getCursorPos()
+            local bar_width = select(1, term.getSize()) - #progress_update - 2
+
+            utils.draw_inline_bar(bar_x, bar_y, i, iterations-1, bar_width)
         end
     end
-    term.setTextColor(colors.green)
-    print("\nFinished computing")
-    term.setTextColor(colors.white)
 
     return T
 end
-
--- function pbkdf2.speed_test(pass, s)
---     local start = os.epoch("utc")
---     local count = 0
-
---     local U = hmac.sign(pass, s .. "\0\0\0\1")
---     local T = U
---     while os.epoch("utc") - start < 1000 do
---         for i = 1, 100 do
---             U = hmac.sign(pass, U)
---             T = xor_strings(T, U)
---         end
---         count = count + 100
---     end
---     print("Iterations per second: " .. count)
--- end
--- 
--- Result: 500 iterations/second
+-- Speed: 2 ms/iteration
 
 return pbkdf2

@@ -1,6 +1,6 @@
-local pbkdf2 = require("pbkdf2")
-local utils  = require("utils")
-local chacha20 = require("chacha20")
+local pbkdf2 = require("sFs.pbkdf2")
+local utils  = require("sFs.utils")
+local chacha20 = require("sFs.chacha20")
 
 local backup_pullEvent = os.pullEvent
 os.pullEvent = utils.pullEventOverride

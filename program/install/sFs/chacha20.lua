@@ -1,4 +1,4 @@
-local utils = require("utils")
+local utils = require("sFs.utils")
 
 ---Generate the matrix state
 ---@param key string A 32 character long string
@@ -114,7 +114,7 @@ end
 ---@return string nonce The nonce used to encrypt the text
 local function encrypt(plaintext, key, nonce, block_count)
     if nonce == nil then
-        local crypto = require("crypto")
+        local crypto = require("sFs.crypto")
         nonce = crypto.random_bytes(12)
     end
 
