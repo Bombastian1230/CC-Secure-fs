@@ -1,5 +1,7 @@
 local cc_strings = require("cc.strings")
 local utils      = require("sFs.utils")
+local crypto     = require("sFs.crypto")
+local pbkdf2     = require("sFs.pbkdf2")
 
 term.clear()
 term.setCursorPos(1, 1)
@@ -39,7 +41,7 @@ repeat
     local event, key = os.pullEvent("key")
 until key == keys["enter"]
 
-local prompt_win = window.create(term.current(), 1, height - 3, width, 4)
+local win = window.create(term.current(), 1, height - 3, width, 4)
 ---Prompt a user for input
 ---@param question string
 ---@param error? string
@@ -50,14 +52,14 @@ local function ask(question, error, blit_fg, blit_bg)
     if not blit_fg then blit_fg = string.rep("0", #question) end
     if not blit_bg then blit_bg = string.rep("f", #question) end
 
-    local oldTerm = term.redirect(prompt_win)
-    prompt_win.clear()
-    prompt_win.setCursorPos(1, 1)
+    local oldTerm = term.redirect(win)
+    win.clear()
+    win.setCursorPos(1, 1)
 
     if error then
-        prompt_win.setTextColor(colors.red)
+        win.setTextColor(colors.red)
         print(error)
-        prompt_win.setTextColor(colors.white)
+        win.setTextColor(colors.white)
     end
 
 
@@ -131,8 +133,8 @@ local error
 while true do
     local response = ask(prompt, error, blit_fg)
 
-    if not valid_answers[agree] then
-        error = agree .. " is not a valid response"
+    if not valid_answers[response] then
+        error = response .. " is not a valid response"
     else
         if response:lower() == "y" then auto_login = true end
         break
@@ -142,7 +144,7 @@ end
 -- Eneable auto logout
 local auto_logout = false
 if term.isColor() then
-    local prompt = "Enable auto logout? p.6 (Y/n)"
+    local prompt =  "Enable auto logout? p.6 (Y/n)"
     local blit_fg = "00000000000000000000444422222"
     local error
     while true do
@@ -157,9 +159,24 @@ if term.isColor() then
     end
 end
 
+-- Use random.org for random numbers
+local prompt =  "Use random.org for random numbers? p.7 (Y/n)"
+local blit_fg = "00000000000000000000000000000000000444422222"
+local allow_random = false
+local error
+while true do
+    local response = ask(prompt, error, blit_fg)
+
+    if not valid_answers[agree] then
+        error = agree .. " is not a valid response"
+    else
+        if response:lower() == "y" then allow_random = true end
+        break
+    end
+end
 
 -- Last warning
-local prompt =  "DO NOT SHUTDOWN COMPUTER UNTIL YOU SEE THE NORMAL SHELL. DO YOU UNDERSTAND? (type \"YES\" to procced type \"no\" to cancel install) p.7"
+local prompt =  "DO NOT SHUTDOWN COMPUTER UNTIL YOU SEE THE NORMAL SHELL. DO YOU UNDERSTAND? (type \"YES\" to procced type \"no\" to cancel install) p.8"
 local blit_fg = "111111111111111111111111111111111111111111111111111111111111111111111111111122222225552222222222222222222ee222222222222222222224444"
 local understand = ""
 local error
@@ -175,6 +192,10 @@ while true do
     end
 end
 
+-- Set settings
+settings.define("crypto.use_random_org", {description = "Whether or not to use random.org for CSPRNG initilizing", type = "boolean", default = true})
+settings.set("crypto.use_random_org", allow_random)
+
 -- Start accually initilizing everything
 local header = string.rep("-", math.ceil((width - 26) / 2)) ..
 " DO NOT SHUTDOWN COMPUTER " .. string.rep("-", math.floor((width - 26) / 2))
@@ -184,21 +205,19 @@ term.setTextColor(colors.orange)
 print(header)
 term.setTextColor(colors.white)
 
-prompt_win.clear()
-prompt_win.reposition(1, header_line, width, height - header_line)
+win.clear()
+win.reposition(1, header_line, width, height - header_line)
 
-local wind_width, win_height = prompt_win.getSize()
+local wind_width, win_height = win.getSize()
+local oldTerm = term.redirect(win)
 
-for i = 1, 100 do
-    if i > 1 then
-        prompt_win.scroll(1)
-    end
-    
-    prompt_win.setCursorPos(1, win_height)
-    prompt_win.clearLine()
-    prompt_win.write(tostring(i))
+fs.makeDir("sFs")
 
-    sleep(0.2)
-end
+-- Create the encryption key
+term.setCursorPos(1, win_height)
+print("Generating base key")
+local base_key = crypto.random_bytes(32)
+local encryption_key = pbkdf2.derive(base_key, crypto.random_bytes(32), 20000, "Generating encryption key")
+print(encryption_key)
 
-os.pullEvent("key")
+term.redirect(oldTerm)
