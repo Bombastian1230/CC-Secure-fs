@@ -1,3 +1,4 @@
+local completion = require "cc.completion"
 local utils = {}
 
 ---Create a shallow copy of a table1
@@ -146,5 +147,7 @@ function utils.clear_up_to(line)
         term.clearLine()
     end
 end
+
+
 
 return utils
