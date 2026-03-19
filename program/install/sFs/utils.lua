@@ -141,7 +141,7 @@ end
 ---@param line integer
 function utils.clear_up_to(line)
     local _, start_y = term.getCursorPos()
-    for i = 1, line - start_y do
+    for i = 1, start_y - line do
         term.setCursorPos(1, start_y - i)
         term.clearLine()
     end
