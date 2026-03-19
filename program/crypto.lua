@@ -42,9 +42,7 @@ function crypto.random_bytes(length)
 
             state.pool_key_gen_time = os.epoch("utc")
         end
-
-        print(state.pool_key)
-
+        
         local random = chacha20.crypt(("\0"):rep(length), state.pool_key, "CSPRNG_NONCE", state.counter)
         state.counter = state.counter + 1
 
