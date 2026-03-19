@@ -148,6 +148,25 @@ function utils.clear_up_to(line)
     end
 end
 
+---Draws an inline progress bar
+---@param x integer
+---@param y integer
+---@param current integer
+---@param total integer
+---@param width integer
+function utils.draw_inline_bar(x, y, current, total, width)
+    local percent = current / total
+    local filled_len = math.floor(percent * width)
+    local empty_len = width - filled_len
 
+
+    term.setCursorPos(x, y)
+    
+    term.setTextColor(colors.green)
+    term.write(string.rep("\143", filled_len))
+    term.setTextColor(colors.gray)
+    term.write(string.rep("\143", empty_len))
+    term.setTextColor(colors.white)
+end
 
 return utils
