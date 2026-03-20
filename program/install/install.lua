@@ -133,7 +133,7 @@ while true do
     local response = ask(prompt, err, blit_fg):lower()
 
     if response == "1" or response == "normal" then
-        iterations = 10000
+        iterations = 10
     elseif response == "2" or response == "strong" then
         iterations = 50000
     elseif response == "3" or response == "very strong" then
@@ -262,7 +262,7 @@ term.blit("done", "dddd", "ffff")
 print()
 sleep(0.1)
 
-local encryption_key = pbkdf2.derive(base_key, crypto.random_bytes(32), 20000, "Generating encryption key")
+local encryption_key = pbkdf2.derive(base_key, crypto.random_bytes(32), 10, "Generating encryption key")
 term.clearLine()
 term.setCursorPos(1, select(2, term.getCursorPos()))
 term.blit("Generating encryption key  done", "000000000000000000000000000dddd", "fffffffffffffffffffffffffffffff")
