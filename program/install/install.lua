@@ -319,5 +319,14 @@ secrets_file.writeLine(e_phrase)
 secrets_file.writeLine(phrase_nonce)
 secrets_file.writeLine(e_encryption_key)
 secrets_file.writeLine(encryption_key_nonce)
+term.blit("done", "dddd", "ffff")
+print()
+sleep(0.1)
+
+
+-- Encrypt files
+local install_drive = fs.find("*/sFs_install.lua")
+print(install_drive[1])
+-- local file_to_encrypt = utils.recursive_file_list("/", {["rom"] = true, [""]})
 
 term.redirect(oldTerm)
