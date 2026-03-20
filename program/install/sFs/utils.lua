@@ -1,3 +1,4 @@
+---@diagnostic disable: deprecated
 local completion = require "cc.completion"
 local utils = {}
 
@@ -167,6 +168,28 @@ function utils.draw_inline_bar(x, y, current, total, width)
     term.setTextColor(colors.gray)
     term.write(string.rep("\143", empty_len))
     term.setTextColor(colors.white)
+end
+
+---Find all files in root recursivly
+---@param root string The folder to search from
+---@param blacklist {[string]: boolean} A blacklist to not include/not search, format: {filename_to_blacklist = true}
+function utils.recursive_file_list(root, blacklist)
+    local files = {}
+
+    for _, file in ipairs(fs.list(root)) do
+        if blacklist[file] then goto continue end
+        local path = fs.combine(root, file)
+
+        if fs.isDir(path) then
+            local dir_files = utils.recursive_file_list(path, blacklist)
+            table.move(dir_files, 1, #dir_files, #files, files)
+        else
+            table.insert(files, path)
+        end
+        ::continue::
+    end
+
+    return files
 end
 
 return utils
