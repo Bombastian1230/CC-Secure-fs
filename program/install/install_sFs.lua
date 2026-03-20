@@ -126,7 +126,7 @@ if agree:lower() == "n" then
 end
 
 -- How many iterations?
-local prompt =  "Security level? p.5 (1:Normal 2:Strong  3:Very Strong)"
+local prompt = "Security level? p.5 (1:Normal 2:Strong  3:Very Strong)"
 local blit_fg = "000000000000000044442222222222222222222222222222222222"
 local iterations, err
 while true do
@@ -143,8 +143,13 @@ while true do
     end
 
     if iterations then
-        local prompt = string.format("Security level %s takes about %d seconds to verify your password, are you sure? (Y/n)", response, (iterations * 2) / 1000)
-        local blit_fg =              "000000000000000" .. string.rep("3", #response) .. "0000000000000" ..  string.rep("3", #tostring((iterations * 2) / 1000)) .. "00000000000000000000000000000000000000000000000022222"
+        local prompt = string.format(
+        "Security level %s takes about %d seconds to verify your password, are you sure? (Y/n)", response,
+            (iterations * 2) / 1000)
+        local blit_fg = "000000000000000" ..
+        string.rep("3", #response) ..
+        "0000000000000" ..
+        string.rep("3", #tostring((iterations * 2) / 1000)) .. "00000000000000000000000000000000000000000000000022222"
         local err
         while true do
             local response = ask(prompt, err, blit_fg)
@@ -235,9 +240,18 @@ while true do
 end
 
 -- Set settings
+settings.define("sFs.auto_login", 
+    {description = "Whether or not to attempt an auto login", type = "boolean", default = false})
+settings.set("sFs.auto_login", auto_login)
+
+settings.define("sFs.auto_logout", 
+    {description = "whether or not to automaticaly logout after 5 min of no interaction", type = "boolean", default = false})
+settings.set("sFs.auto_logout", auto_logout)
+
 settings.define("crypto.use_random_org",
     { description = "Whether or not to use random.org for CSPRNG initilizing", type = "boolean", default = true })
 settings.set("crypto.use_random_org", allow_random)
+settings.save()
 
 -- Start accually initilizing everything
 local header = string.rep("\173", math.ceil((width - 26) / 2)) ..
@@ -324,10 +338,53 @@ print()
 sleep(0.1)
 
 
--- Encrypt files
+-- Find files to encrypt
+write("Finding files  ")
 local install_drive = fs.getDir(fs.find("*/install_sFs.lua")[1])
-local file_to_encrypt = utils.recursive_file_list("/", {["rom"] = true, [install_drive] = true, ["startup.lua"] = true, [".settings"] = true})
+local file_to_encrypt = utils.recursive_file_list("/",
+    { ["rom"] = true, [install_drive] = true, ["startup.lua"] = true, [".settings"] = true })
+term.blit("done", "dddd", "ffff")
+print()
+sleep(0.1)
 
+local transfer_file = assert(fs.open("sFs/transfer.txt", "w+"))
+for _, path in ipairs(file_to_encrypt) do
+    write("Encrypting " .. path .. "  ")
 
+    local file = assert(fs.open(path, "r+"))
+    local file_nonce = crypto.random_bytes(12)
+
+    file.write(file_nonce)
+
+    while true do
+        local chunk = file.read(4096)
+        if chunk == nil then break end
+
+        local e_chunk = chacha20.crypt(chunk, encryption_key, file_nonce)
+        transfer_file.write(chunk)
+    end
+
+    transfer_file.seek("set", 0)
+    file.seek("set", 0)
+
+    while true do 
+        local chunk = file.read(4096)
+        if chunk == nil then break end
+
+        file.write(chunk)
+    end
+    file.close()
+    transfer_file.seek("set", 0)
+    term.blit("done", "dddd", "ffff")
+
+    print()
+    sleep(0.1)
+end
+
+term.setTextColor(colors.orange)
+for i = 1, 5 do
+    write("All files encrypted; rebooting in " .. tostring(i))
+    term.setCursorPos(1, select(2, term.getCursorPos()))
+end
 
 term.redirect(oldTerm)
