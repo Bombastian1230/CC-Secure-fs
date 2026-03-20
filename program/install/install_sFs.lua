@@ -325,7 +325,7 @@ sleep(0.1)
 
 
 -- Encrypt files
-local install_drive = fs.getDir(fs.find("*/sFs_install.lua")[1])
+local install_drive = fs.getDir(fs.find("*/install_sFs.lua")[1])
 local file_to_encrypt = utils.recursive_file_list("/", {["rom"] = true, [install_drive] = true, ["startup.lua"] = true, [".settings"] = true})
 
 
