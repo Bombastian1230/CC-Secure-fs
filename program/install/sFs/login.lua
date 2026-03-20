@@ -21,13 +21,14 @@ print([[
 ]])
 
 ---Returns the sensative info about the computer
----@return {iterations: number, salt: string, password_validation: string, encrypted_e_key: string, e_key_nonce: string}
+---@return {iterations: number, pass_salt: string, password_validation: string, password_validation_nonce: string, encrypted_e_key: string, e_key_nonce: string}
 local function get_secrets()
     local file = assert(fs.open("sFs/secrets.txt", "r"))
     local secrets = {
         iterations = tonumber(file.readLine()),
-        salt = file.readLine(),
+        pass_salt = file.readLine(),
         password_validation = file.readLine(),
+        password_validation_nonce = file.readLine(),
         encrypted_e_key = file.readLine(),
         e_key_nonce = file.readLine()
     }
@@ -50,8 +51,8 @@ local function basic_check(pass)
 end
 
 local function full_check(pass)
-    local d_pass = pbkdf2.derive(pass, secrets.salt, secrets.iterations)
-    local correct = chacha20.crypt(secrets.password_validation, d_pass, "T69YTLag5DPx") == secrets.password_validation
+    local d_pass = pbkdf2.derive(pass, secrets.pass_salt, secrets.iterations, "Deriving password")
+    local correct = chacha20.crypt("This checks that the password is correct! Isn't that cool!", d_pass, secrets.password_validation_nonce) == secrets.password_validation
 
     return correct, d_pass
 end

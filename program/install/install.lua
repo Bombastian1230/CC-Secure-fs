@@ -2,6 +2,7 @@ local cc_strings = require("cc.strings")
 local utils      = require("sFs.utils")
 local crypto     = require("sFs.crypto")
 local pbkdf2     = require("sFs.pbkdf2")
+local chacha20   = require("sFs.chacha20")
 
 term.clear()
 term.setCursorPos(1, 1)
@@ -20,8 +21,8 @@ print([[
 
 local width, height = term.getSize()
 
-local header = string.rep("-", math.ceil((width - 13) / 2)) ..
-    " PLEASE READ " .. string.rep("-", math.floor((width - 13) / 2))
+local header = string.rep("\173", math.ceil((width - 13) / 2)) ..
+    " PLEASE READ " .. string.rep("\173", math.floor((width - 13) / 2))
 local instructions = cc_strings.wrap(
     "There are detailed installation instructions and technical details in the book you got with the install disk.\nEvery step and choice in this installation is explained in detail in the book, every step is also labeled with its relevant page number.")
 
@@ -239,8 +240,8 @@ settings.define("crypto.use_random_org",
 settings.set("crypto.use_random_org", allow_random)
 
 -- Start accually initilizing everything
-local header = string.rep("-", math.ceil((width - 26) / 2)) ..
-    " DO NOT SHUTDOWN COMPUTER " .. string.rep("-", math.floor((width - 26) / 2))
+local header = string.rep("\173", math.ceil((width - 26) / 2)) ..
+    " DO NOT SHUTDOWN COMPUTER " .. string.rep("\173", math.floor((width - 26) / 2))
 
 term.setCursorPos(1, header_line - 1)
 term.setTextColor(colors.orange)
@@ -250,24 +251,65 @@ term.setTextColor(colors.white)
 win.clear()
 win.reposition(1, header_line, width, height - header_line)
 
-local wind_width, win_height = win.getSize()
 local oldTerm = term.redirect(win)
-
-fs.makeDir("sFs")
+local wind_width, win_height = win.getSize()
 
 -- Create the encryption key
 term.setCursorPos(1, win_height)
-term.write("Generating base key")
-term.setCursorPos(1, win_height)
-term.scroll(1)
+write("Generating base key  ")
 local base_key = crypto.random_bytes(32)
+term.blit("done", "dddd", "ffff")
+print()
 
 local encryption_key = pbkdf2.derive(base_key, crypto.random_bytes(32), 20000, "Generating encryption key")
+term.clearLine()
+term.setCursorPos(1, select(2, term.getCursorPos()))
+term.blit("Generating encryption key  done", "000000000000000000000000000dddd", "fffffffffffffffffffffffffffffff")
+print()
+
 
 -- Create the password hash
-term.write("Generating password salt")
-term.scroll(1)
+write("Generating password salt  ")
 local salt = crypto.random_bytes(32)
+term.blit("done", "dddd", "ffff")
+print()
+
 local d_password = pbkdf2.derive(password, salt, iterations, "Generating password hash")
+term.clearLine()
+term.setCursorPos(1, select(2, term.getCursorPos()))
+term.blit("Generating password hash  done", "00000000000000000000000000dddd", "ffffffffffffffffffffffffffffff")
+print()
+
+
+-- Encrypt verification phrase
+write("Encrypting verfication phrase  ")
+local e_phrase, phrase_nonce = chacha20.crypt("This checks that the password is correct! Isn't that cool!", d_password)
+term.blit("done", "dddd", "ffff")
+print()
+
+-- Encrypt the encryption key
+write("Encrypting encryption key  ")
+local e_encryption_key, encryption_key_nonce = chacha20.crypt(encryption_key, d_password)
+term.blit("done", "dddd", "ffff")
+print()
+
+-- Save the sensative data
+write("Createing folder  ")
+fs.makeDir("sFs")
+term.blit("done", "dddd", "ffff")
+print()
+
+write("Creating secrets.txt  ")
+local secrets_file = assert(fs.open("sFs/secrets.txt", "w"))
+term.blit("done", "dddd", "ffff")
+print()
+
+write("Saving secrets  ")
+secrets_file.writeLine(iterations)
+secrets_file.writeLine(salt)
+secrets_file.writeLine(e_phrase)
+secrets_file.writeLine(phrase_nonce)
+secrets_file.writeLine(e_encryption_key)
+secrets_file.writeLine(encryption_key_nonce)
 
 term.redirect(oldTerm)
