@@ -27,6 +27,14 @@ function pbkdf2.derive(password, salt, iterations, progress_message)
 
     local startX, startY = term.getCursorPos()
 
+    local progress_update = string.format("%s ", progress_message)
+
+    local bar_width = select(1, term.getSize()) - #progress_update - 2
+    
+    term.write(progress_update)
+    local bar_x, bar_y = term.getCursorPos()
+    utils.draw_inline_bar(bar_x, bar_y, 0, iterations - 1, bar_width)
+
     for i = 1, iterations - 1 do
         U = hmac.sign(password, U)
         T = xor_strings(T, U)
@@ -36,19 +44,14 @@ function pbkdf2.derive(password, salt, iterations, progress_message)
         if i % 500 == 0 or i == iterations - 1 then
             term.setCursorPos(startX, startY)
             term.clearLine()
-
-            local progress_update = string.format("%s ", progress_message)
             term.write(progress_update)
-
-            local bar_x, bar_y = term.getCursorPos()
-            local bar_width = select(1, term.getSize()) - #progress_update - 2
-
-            utils.draw_inline_bar(bar_x, bar_y, i, iterations-1, bar_width)
+            utils.draw_inline_bar(bar_x, bar_y, i, iterations - 1, bar_width)
         end
     end
 
     return T
 end
+
 -- Speed: 2 ms/iteration
 
 return pbkdf2
