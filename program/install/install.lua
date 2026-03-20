@@ -260,12 +260,14 @@ write("Generating base key  ")
 local base_key = crypto.random_bytes(32)
 term.blit("done", "dddd", "ffff")
 print()
+sleep(0.1)
 
 local encryption_key = pbkdf2.derive(base_key, crypto.random_bytes(32), 20000, "Generating encryption key")
 term.clearLine()
 term.setCursorPos(1, select(2, term.getCursorPos()))
 term.blit("Generating encryption key  done", "000000000000000000000000000dddd", "fffffffffffffffffffffffffffffff")
 print()
+sleep(0.1)
 
 
 -- Create the password hash
@@ -273,12 +275,14 @@ write("Generating password salt  ")
 local salt = crypto.random_bytes(32)
 term.blit("done", "dddd", "ffff")
 print()
+sleep(0.1)
 
 local d_password = pbkdf2.derive(password, salt, iterations, "Generating password hash")
 term.clearLine()
 term.setCursorPos(1, select(2, term.getCursorPos()))
 term.blit("Generating password hash  done", "00000000000000000000000000dddd", "ffffffffffffffffffffffffffffff")
 print()
+sleep(0.1)
 
 
 -- Encrypt verification phrase
@@ -286,18 +290,22 @@ write("Encrypting verfication phrase  ")
 local e_phrase, phrase_nonce = chacha20.crypt("This checks that the password is correct! Isn't that cool!", d_password)
 term.blit("done", "dddd", "ffff")
 print()
+sleep(0.1)
 
 -- Encrypt the encryption key
 write("Encrypting encryption key  ")
 local e_encryption_key, encryption_key_nonce = chacha20.crypt(encryption_key, d_password)
 term.blit("done", "dddd", "ffff")
 print()
+sleep(0.1)
+
 
 -- Save the sensative data
 write("Createing folder  ")
 fs.makeDir("sFs")
 term.blit("done", "dddd", "ffff")
 print()
+sleep(0.1)
 
 write("Creating secrets.txt  ")
 local secrets_file = assert(fs.open("sFs/secrets.txt", "w"))
