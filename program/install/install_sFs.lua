@@ -370,12 +370,15 @@ for _, path in ipairs(file_to_encrypt) do
 
     local original_file = assert(fs.open(path, "r"))
 
+    local byte_offset = 0
     while true do
         local chunk = original_file.read(4096)
         if chunk == nil then break end
 
-        local e_chunk = chacha20.crypt(chunk, encryption_key, file_nonce)
+        local e_chunk = chacha20.crypt(chunk, encryption_key, file_nonce, byte_offset)
         tmp_file.write(e_chunk)
+
+        byte_offset = byte_offset + 4096
     end
     
     tmp_file.close()

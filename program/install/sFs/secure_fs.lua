@@ -172,12 +172,14 @@ S_fs.open = function(path, mode)
 
         S_handle.nonce = O_handle.read(12)
 
+        local byte_offset = 0
         while true do
             local e_chunk = O_handle.read(4096)
             if e_chunk == nil then break end
 
-            local chunk = chacha20.crypt(e_chunk, encryption_key, S_handle.nonce)
+            local chunk = chacha20.crypt(e_chunk, encryption_key, S_handle.nonce, byte_offset)
             tmp_handle.write(chunk)
+            byte_offset = byte_offset + 4096
         end
 
         if isAppending then
@@ -244,13 +246,16 @@ S_fs.open = function(path, mode)
             tmp_handle.seek("set", 0)
             O_handle.seek("set", 0)
             O_handle.write(new_nonce)
-    
+            
+            local byte_offest = 0
             while true do
                 local chunk = tmp_handle.read(4096)
                 if chunk == nil then break end
 
-                local e_chunk = chacha20.crypt(chunk, encryption_key, new_nonce)
+                local e_chunk = chacha20.crypt(chunk, encryption_key, new_nonce, byte_offest)
                 O_handle.write(e_chunk)
+
+                byte_offest = byte_offest + 4096
             end        
 
             tmp_handle.seek("set", tmp_position)
