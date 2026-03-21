@@ -19,7 +19,7 @@ local state = _G.__CRYPTO_STATE
 ---@return string|nil
 local function get_secure_bytes(count)
     print(count)
-    local url = string.format("https://www.random.org/cgi-bin/randbytes?nbytes=%d&format=h", count)
+    local url = string.format("https://www.random.org/cgi-bin/randbyte?nbytes=%d&format=h", count)
     
     local response = http.get(url)
     if not response then
