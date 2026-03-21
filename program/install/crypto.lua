@@ -18,16 +18,17 @@ local state = _G.__CRYPTO_STATE
 ---@return string|nil
 ---@return string|nil
 local function get_secure_bytes(count)
-    local url = string.format("https://www.random.org/cgi-bin/randbyte?nbytes=%d&format=h", count)
+    print(count)
+    local url = string.format("https://www.random.org/cgi-bin/randbytes?nbytes=%d&format=h", count)
     
     local response = http.get(url)
     if not response then
+        print("No connection")
         return nil, "Connection failed"
     end
 
     local hex = response.readAll():gsub("%s+", "")
     response.close()
-
     return utils.string_from_hex(hex)
 end
 
@@ -38,7 +39,10 @@ function crypto.random_bytes(length)
         if state.pool_key == nil or os.epoch("utc") - state.pool_key_gen_time > 600000 then
             local new_key = get_secure_bytes(32)
             state.pool_key = new_key 
-            if state.pool_key == nil then goto failsafe end
+            if state.pool_key == nil then 
+                -- print("Pool key still nil")
+                goto failsafe 
+            end
 
             state.pool_key_gen_time = os.epoch("utc")
         end

@@ -1,6 +1,6 @@
-local pbkdf2 = require("sFs.pbkdf2")
-local utils  = require("sFs.utils")
-local chacha20 = require("sFs.chacha20")
+local pbkdf2 = require("pbkdf2")
+local utils  = require("utils")
+local chacha20 = require("chacha20")
 
 local backup_pullEvent = os.pullEvent
 os.pullEvent = utils.pullEventOverride
@@ -108,7 +108,11 @@ end
 
 local function auto_login()
     local d_pass
-    for drive in peripheral.find("drive") do
+    local drives = {peripheral.find("drive")}
+    if drives == nil then
+        goto no_drives
+    end
+    for _, drive in ipairs(drives) do
         local path = fs.combine(drive.getMountPath(), "password.txt")
 
         local success, file = pcall(fs.open, path, "r")
@@ -127,7 +131,7 @@ local function auto_login()
             break
         end
     end
-
+    ::no_drives::
     if d_pass == nil then
         term.setTextColor(colors.red)
         print("Failed to find any valid passwords in files in root of attached drives")

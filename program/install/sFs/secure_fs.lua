@@ -1,6 +1,6 @@
-local crypto = require "sFs.crypto"
-local chacha20 = require("sFs.chacha20")
-local utils = require("sFs.utils")
+local crypto = require "crypto"
+local chacha20 = require("chacha20")
+local utils = require("utils")
 
 S_fs = {}
 O_fs = {}
