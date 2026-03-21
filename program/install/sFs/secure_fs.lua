@@ -154,7 +154,7 @@ S_fs.open = function(path, mode)
     if path:find("^sfs/") and isWriteable then
         return nil
     end
-    if S_fs.isReadOnly(path) or path:match("startup%.lua") then
+    if S_fs.isReadOnly(path) or path:match("startup%.lua") or path:match("%.settings") then
         return O_fs.open(path, mode)
     end
 
