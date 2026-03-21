@@ -109,26 +109,32 @@ end
 ---@param plaintext string The text to encrypt
 ---@param key string A 32 character long string
 ---@param nonce? string A random string 12 bytes long, if unspecified automaticaly generated.
----@param block_count? integer The block count to start on
+---@param byte_offset? integer How many bytes that have already been encrypted using this key and nonce, defaults to 0
 ---@return string ciphertext The encrypted text
 ---@return string nonce The nonce used to encrypt the text
-local function encrypt(plaintext, key, nonce, block_count)
+local function encrypt(plaintext, key, nonce, byte_offset)
+    if byte_offset == nil then byte_offset = 0 end
     if nonce == nil then
         local crypto = require("sFs.crypto")
         nonce = crypto.random_bytes(12)
     end
 
-    local keystream = generate_keystream(key, nonce, #plaintext, block_count or 0)
+    local block_count = math.floor(byte_offset/64)
+    local remaining_offset = byte_offset % 64
+
+    local keystream_length = #plaintext + remaining_offset
+    local keystream = generate_keystream(key, nonce, keystream_length, block_count)
 
     local cipherbytes = {}
     for i = 1, #plaintext do
-        local plainbyte = string.byte(string.sub(plaintext, i))
-        table.insert(cipherbytes, bit32.bxor(keystream[i], plainbyte))
+        local plainbyte = string.byte(plaintext, i)
+        local cipherbyte = bit32.bxor(keystream[i+remaining_offset], plainbyte)
+        cipherbytes[i] = string.char(cipherbyte)
 
         utils.yield(4096, i)
     end
 
-    return string.char(table.unpack(cipherbytes)), nonce
+    return table.concat(cipherbytes), nonce
 end
 
 return {
