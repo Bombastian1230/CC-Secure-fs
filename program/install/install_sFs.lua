@@ -412,6 +412,7 @@ term.setTextColor(colors.orange)
 for i = 0, 5 do
     write("Install complete; Rebooting in " .. tostring(5 - i))
     term.setCursorPos(1, select(2, term.getCursorPos()))
+    sleep(1)
 end
 term.redirect(oldTerm)
 os.reboot()
