@@ -111,7 +111,7 @@ S_fs.list = function (path)
     
     local filtered = {}
     for _, name in ipairs(list) do
-        if name:match("^%.tmp_") then
+        if not name:match("^%.tmp_") then
             table.insert(filtered, name)
         end
     end
