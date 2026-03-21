@@ -304,10 +304,15 @@ S_fs.copy = function (source, destination)
     destination_file.close()
 end
 
-
 S_fs.init_key = function (key)
     encryption_key = key
     S_fs.init_key = nil
+end
+
+for k, v in pairs(O_fs) do
+    if S_fs[k] == nil then
+        S_fs[k] = v
+    end
 end
 
 return S_fs
