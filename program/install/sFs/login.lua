@@ -1,6 +1,6 @@
-local pbkdf2 = require("pbkdf2")
-local utils  = require("utils")
-local chacha20 = require("chacha20")
+local pbkdf2           = require("pbkdf2")
+local utils            = require("utils")
+local chacha20         = require("chacha20")
 
 local backup_pullEvent = os.pullEvent
 --os.pullEvent = utils.pullEventOverride
@@ -10,14 +10,14 @@ term.clear()
 term.setTextColor(colors.white)
 print([[
 
-      ______     _             _       
-     |  ____|   | |           (_)      
-  ___| |__ ___  | | ___   __ _ _ _ __  
- / __|  __/ __| | |/ _ \ / _` | | '_ \ 
+      ______     _             _
+     |  ____|   | |           (_)
+  ___| |__ ___  | | ___   __ _ _ _ __
+ / __|  __/ __| | |/ _ \ / _` | | '_ \
  \__ \ |  \__ \ | | (_) | (_| | | | | |
  |___/_|  |___/ |_|\___/ \__, |_|_| |_|
-                          __/ |        
-                         |___/         
+                          __/ |
+                         |___/
 ]])
 
 ---Returns the sensative info about the computer
@@ -52,7 +52,8 @@ end
 
 local function full_check(pass)
     local d_pass = pbkdf2.derive(pass, secrets.pass_salt, secrets.iterations, "Deriving password")
-    local encryped_validation = chacha20.crypt("This checks that the password is correct! Isn't that cool!", d_pass, secrets.password_validation_nonce)
+    local encryped_validation = chacha20.crypt("This checks that the password is correct! Isn't that cool!", d_pass,
+        secrets.password_validation_nonce)
     local correct = encryped_validation == secrets.password_validation
     return correct, d_pass
 end
@@ -62,7 +63,7 @@ local function manual_input()
     print()
 
     local startX, startY = term.getCursorPos()
-    
+
     while true do
         -- Basic password check
         term.write("Password: ")
@@ -110,7 +111,7 @@ end
 
 local function auto_login()
     local d_pass
-    local drives = {peripheral.find("drive")}
+    local drives = { peripheral.find("drive") }
     if drives == nil then
         goto no_drives
     end
@@ -156,30 +157,32 @@ end
 local encryption_key = chacha20.crypt(secrets.encrypted_e_key, d_pass, secrets.e_key_nonce)
 
 -- Overides
-_G.fs = require("secure_fs")
-fs.init_key(encryption_key)
+if not settings.get("sFs.raw_mode", false) then
+    _G.fs = require("secure_fs")
+    fs.init_key(encryption_key)
 
----Loads a chunk from file filename or from the standard input, if no file name is given.
----@param filename string
----@param mode? "b"|"bt"|"t"
----@param env? table
-_G.loadfile = function (filename, mode, env)
-    local handle = fs.open(filename, "r")
-    if handle == nil then return nil, "File not found" end
+    ---Loads a chunk from file filename or from the standard input, if no file name is given.
+    ---@param filename string
+    ---@param mode? "b"|"bt"|"t"
+    ---@param env? table
+    _G.loadfile = function(filename, mode, env)
+        local handle = fs.open(filename, "r")
+        if handle == nil then return nil, "File not found" end
 
-    local content = assert(handle.readAll())
-    handle.close()
+        local content = assert(handle.readAll())
+        handle.close()
 
-    return load(content, "@" .. filename, mode, env or _G)
-end
+        return load(content, "@" .. filename, mode, env or _G)
+    end
 
----Opens the named file and executes its content as a Lua chunk. When called without arguments, dofile executes the content of the standard input (stdin). Returns all values returned by the chunk. In case of errors, dofile propagates the error to its caller. (That is, dofile does not run in protected mode.)
----@param filename string
----@return ...
-_G.dofile = function (filename)
-    local f, err = loadfile(filename)
-    if f == nil then return nil, err end
-    return f()
+    ---Opens the named file and executes its content as a Lua chunk. When called without arguments, dofile executes the content of the standard input (stdin). Returns all values returned by the chunk. In case of errors, dofile propagates the error to its caller. (That is, dofile does not run in protected mode.)
+    ---@param filename string
+    ---@return ...
+    _G.dofile = function(filename)
+        local f, err = loadfile(filename)
+        if f == nil then return nil, err end
+        return f()
+    end
 end
 
 os.pullEvent = backup_pullEvent
