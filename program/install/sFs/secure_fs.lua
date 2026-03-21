@@ -11,46 +11,6 @@ end
 ---@type string
 local encryption_key = nil
 
----Returns the keystream for a specific block of data based on its position in the file
----@param position integer
----@param data_size integer
----@param path string
----@param key string
-function S_fs.getKeystream(position, data_size, path, key)
-    local nonce = S_fs.getNonce(path)
-    local block_count = math.floor((position) / 64)
-    local block_amount = math.floor((position + data_size) / 64) - block_count + 1
-    local keystream = {}
-
-    for block_count = block_count, block_count + block_amount do
-        local block = chacha20.generate_keystream_block(key, nonce, block_count)
-        for _, word in ipairs(block) do
-            local bytes = utils.bytes_from_int32(word)
-            for _, byte in ipairs(bytes) do
-                table.insert(keystream, byte)
-            end
-        end
-    end
-
-    local keystream_start = (position) % 64 + 1
-    local keystream_end = keystream_start + data_size - 1
-
-    return { table.unpack(keystream, keystream_start, keystream_end) }
-end
-
----En/decrypt the data using the keystream
----@param data string
----@param keystream integer[]
-function S_fs.crypt(data, keystream)
-    local crypted = {}
-    for i = 1, #data do
-        local byte = data:byte(i)
-        crypted[i] = bit32.bxor(byte, keystream[i])
-    end
-
-    return string.char(table.unpack(crypted))
-end
-
 --- Return true if the path is mounted to the parrent, the new root folder counts as mounted
 --- @param path string
 --- @return boolean
@@ -136,7 +96,6 @@ S_fs.find = function(wildcard)
     return filtered
 end
 
--- TODO: FIX EVERY CHUNK BEING ENCRYPED WITH THE SAME KEYSTREAM
 ---Open a file for reading/writing
 ---@param path string
 ---@param mode ccTweaked.fs.openMode
