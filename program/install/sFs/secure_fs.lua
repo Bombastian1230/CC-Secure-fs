@@ -1,6 +1,5 @@
 local crypto = require "crypto"
 local chacha20 = require("chacha20")
-local utils = require("utils")
 
 S_fs = {}
 O_fs = {}
@@ -16,7 +15,7 @@ local encryption_key = nil
 --- @return boolean
 S_fs.isReadOnly = function (path)
     path = O_fs.combine(path)
-    if path:find("^rom/") or path:find("^sfs/") then
+    if path:find("^rom/") or path:find("^sFs/") then
         return true
     end
     return false
@@ -193,7 +192,7 @@ S_fs.open = function(path, mode)
 
     if isWriteable then
         ----- Functions for Write handles
-        
+
         local function saveToDisk() 
             local tmp_position = tmp_handle.seek("cur", 0)
             local O_position = O_handle.seek("cur", 0)
