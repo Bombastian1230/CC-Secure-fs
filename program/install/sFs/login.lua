@@ -3,7 +3,7 @@ local utils  = require("utils")
 local chacha20 = require("chacha20")
 
 local backup_pullEvent = os.pullEvent
-os.pullEvent = utils.pullEventOverride
+--os.pullEvent = utils.pullEventOverride
 
 term.setCursorPos(1, 1)
 term.clear()
@@ -26,11 +26,11 @@ local function get_secrets()
     local file = assert(fs.open("sFs/secrets.txt", "r"))
     local secrets = {
         iterations = tonumber(file.readLine()),
-        pass_salt = file.readLine(),
-        password_validation = file.readLine(),
-        password_validation_nonce = file.readLine(),
-        encrypted_e_key = file.readLine(),
-        e_key_nonce = file.readLine()
+        pass_salt = utils.string_from_hex(file.readLine()),
+        password_validation = utils.string_from_hex(file.readLine()),
+        password_validation_nonce = utils.string_from_hex(file.readLine()),
+        encrypted_e_key = utils.string_from_hex(file.readLine()),
+        e_key_nonce = utils.string_from_hex(file.readLine())
     }
     file.close()
 
@@ -52,8 +52,8 @@ end
 
 local function full_check(pass)
     local d_pass = pbkdf2.derive(pass, secrets.pass_salt, secrets.iterations, "Deriving password")
-    local correct = chacha20.crypt("This checks that the password is correct! Isn't that cool!", d_pass, secrets.password_validation_nonce) == secrets.password_validation
-
+    local encryped_validation = chacha20.crypt("This checks that the password is correct! Isn't that cool!", d_pass, secrets.password_validation_nonce)
+    local correct = encryped_validation == secrets.password_validation
     return correct, d_pass
 end
 
@@ -92,7 +92,7 @@ local function manual_input()
             return d_pass
         else
             term.clearLine()
-            term.setCursorPos(startX, startY)
+            term.setCursorPos(1, 1)
             term.clearLine()
             term.setTextColor(colors.red)
 
