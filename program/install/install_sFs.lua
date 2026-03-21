@@ -144,12 +144,13 @@ while true do
 
     if iterations then
         local prompt = string.format(
-        "Security level %s takes about %d seconds to verify your password, are you sure? (Y/n)", response,
+            "Security level %s takes about %d seconds to verify your password, are you sure? (Y/n)", response,
             (iterations * 2) / 1000)
         local blit_fg = "000000000000000" ..
-        string.rep("3", #response) ..
-        "0000000000000" ..
-        string.rep("3", #tostring((iterations * 2) / 1000)) .. "00000000000000000000000000000000000000000000000022222"
+            string.rep("3", #response) ..
+            "0000000000000" ..
+            string.rep("3", #tostring((iterations * 2) / 1000)) ..
+            "00000000000000000000000000000000000000000000000022222"
         local err
         while true do
             local response = ask(prompt, err, blit_fg)
@@ -240,17 +241,21 @@ while true do
 end
 
 -- Set settings
-settings.define("sFs.auto_login", 
-    {description = "Whether or not to attempt an auto login", type = "boolean", default = false})
+settings.define("sFs.auto_login",
+    { description = "Whether or not to attempt an auto login", type = "boolean", default = false })
 settings.set("sFs.auto_login", auto_login)
 
-settings.define("sFs.auto_logout", 
-    {description = "whether or not to automaticaly logout after 5 min of no interaction", type = "boolean", default = false})
+settings.define("sFs.auto_logout",
+    { description = "whether or not to automaticaly logout after 5 min of no interaction", type = "boolean", default = false })
 settings.set("sFs.auto_logout", auto_logout)
 
 settings.define("crypto.use_random_org",
     { description = "Whether or not to use random.org for CSPRNG initilizing", type = "boolean", default = true })
 settings.set("crypto.use_random_org", allow_random)
+
+settings.define("sFs.raw_mode",
+    { description = "Wether the next time the computer starts it should boot in raw mode (Without overriding fs)", type = "boolean", default = false })
+settings.set("sFs.raw_mode", true)
 settings.save()
 
 -- Start accually initilizing everything
@@ -375,7 +380,7 @@ for _, path in ipairs(file_to_encrypt) do
     transfer_file.seek("set", 0)
     file.seek("set", 0)
 
-    while true do 
+    while true do
         local chunk = file.read(4096)
         if chunk == nil then break end
 
@@ -394,7 +399,9 @@ end
 write("Adding sFs to startup  ")
 local new_startup = assert(fs.open("new_starup.lua", "w"))
 new_startup.writeLine("shell.execute(\"sFs/login.lua\")")
-new_startup.writeLine("-- DO NOT REMOVE ABOVE LINE, IF YOU DO SO ALL YOUR FILES WILL BE ENCRYPTED WITH NO WAY OF READING THEM, IF YOU WANT TO SEE THE ENCRYPTED FILES RUN \"sFs raw\" IN THE SHELL --")
+new_startup.writeLine(
+"-- DO NOT REMOVE ABOVE LINE, IF YOU DO SO ALL YOUR FILES WILL BE ENCRYPTED WITH NO WAY OF READING THEM, IF YOU WANT TO SEE THE ENCRYPTED FILES RUN \"sFs raw\" IN THE SHELL --")
+
 
 -- Append old startup to new one
 if fs.exists("startup.lua") then
@@ -406,7 +413,9 @@ end
 
 new_startup.close()
 fs.move("new_starup.lua", "startup.lua")
-
+term.blit("done", "dddd", "ffff")
+print()
+sleep(0.1)
 
 term.setTextColor(colors.orange)
 for i = 0, 5 do
