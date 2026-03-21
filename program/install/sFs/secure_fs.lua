@@ -249,7 +249,8 @@ S_fs.open = function(path, mode)
                 local chunk = tmp_handle.read(4096)
                 if chunk == nil then break end
 
-                O_handle.write(chunk)
+                local e_chunk = chacha20.crypt(chunk, encryption_key, new_nonce)
+                O_handle.write(e_chunk)
             end        
 
             tmp_handle.seek("set", tmp_position)
