@@ -136,7 +136,7 @@ S_fs.find = function(wildcard)
     return filtered
 end
 
-
+-- TODO: FIX EVERY CHUNK BEING ENCRYPED WITH THE SAME KEYSTREAM
 ---Open a file for reading/writing
 ---@param path string
 ---@param mode ccTweaked.fs.openMode
