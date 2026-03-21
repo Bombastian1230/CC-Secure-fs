@@ -255,7 +255,7 @@ settings.set("crypto.use_random_org", allow_random)
 
 settings.define("sFs.raw_mode",
     { description = "Wether the next time the computer starts it should boot in raw mode (Without overriding fs)", type = "boolean", default = false })
-settings.set("sFs.raw_mode", true)
+
 settings.save()
 
 -- Start accually initilizing everything

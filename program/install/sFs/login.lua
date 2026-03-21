@@ -145,7 +145,7 @@ local function auto_login()
     return d_pass
 end
 
----@type string|nil Hello world, i am logging in
+---@type string|nil
 local d_pass
 if settings.get("sFs.auto_login", false) then
     d_pass = auto_login()
@@ -156,11 +156,28 @@ if d_pass == nil then
 end
 local encryption_key = chacha20.crypt(secrets.encrypted_e_key, d_pass, secrets.e_key_nonce)
 
--- Overides
-if not settings.get("sFs.raw_mode", false) then
-    _G.fs = require("secure_fs")
-    fs.init_key(encryption_key)
 
+-- Overides
+if settings.get("sFs.raw_mode", false) then
+    print("Logging into raw mode...")
+    os.sleep(1)
+    local w, h = term.getSize()
+
+    term.setCursorPos(1, 1)
+    term.setBackgroundColor(colors.red)
+    term.setTextColor(colors.white)
+
+    local msg = "!!! RAW MODE !!!"
+    term.setCursorPos(math.floor((w - #msg) / 2) + 1, 1)
+    term.write(msg)
+
+    local redirect_win = window.create(term.current(), 1, 2, w, h-1)
+    term.redirect(redirect_win)
+
+    settings.set("sFs.raw_mode", false)
+else
+    print("Logging in...")
+    os.sleep(1)
     ---Loads a chunk from file filename or from the standard input, if no file name is given.
     ---@param filename string
     ---@param mode? "b"|"bt"|"t"
@@ -168,13 +185,13 @@ if not settings.get("sFs.raw_mode", false) then
     _G.loadfile = function(filename, mode, env)
         local handle = fs.open(filename, "r")
         if handle == nil then return nil, "File not found" end
-
+        
         local content = assert(handle.readAll())
         handle.close()
-
+        
         return load(content, "@" .. filename, mode, env or _G)
     end
-
+    
     ---Opens the named file and executes its content as a Lua chunk. When called without arguments, dofile executes the content of the standard input (stdin). Returns all values returned by the chunk. In case of errors, dofile propagates the error to its caller. (That is, dofile does not run in protected mode.)
     ---@param filename string
     ---@return ...
@@ -183,6 +200,14 @@ if not settings.get("sFs.raw_mode", false) then
         if f == nil then return nil, err end
         return f()
     end
+
+    _G.fs = require("secure_fs")
+    fs.init_key(encryption_key)
+    term.setCursorPos(1, 1)
 end
+
+term.clear()
+
+settings.save()
 
 os.pullEvent = backup_pullEvent
