@@ -336,10 +336,10 @@ secrets_file.writeLine(encryption_key_nonce)
 term.blit("done", "dddd", "ffff")
 print()
 sleep(0.1)
-
+secrets_file.close()
 
 -- Find files to encrypt
-write("Finding files  ")
+write("Finding all files  ")
 local install_drive = fs.getDir(fs.find("*/install_sFs.lua")[1])
 local file_to_encrypt = utils.recursive_file_list("/",
     { ["rom"] = true, [install_drive] = true, ["startup.lua"] = true, [".settings"] = true })
@@ -381,10 +381,37 @@ for _, path in ipairs(file_to_encrypt) do
     sleep(0.1)
 end
 
-term.setTextColor(colors.orange)
-for i = 1, 5 do
-    write("All files encrypted; rebooting in " .. tostring(i))
-    term.setCursorPos(1, select(2, term.getCursorPos()))
+
+-- Copy over all the program files
+write("Copying over files  ")
+fs.copy(fs.combine(install_drive, "sFs"), "/sFs")
+term.blit("done", "dddd", "ffff")
+print()
+sleep(0.1)
+
+
+-- Add override to startup lua
+write("Adding sFs to startup  ")
+local new_startup = assert(fs.open("new_starup.lua", "w"))
+new_startup.writeLine("shell.execute(\"sFs/login.lua\")")
+new_startup.writeLine("-- DO NOT REMOVE ABOVE LINE, IF YOU DO SO ALL YOUR FILES WILL BE ENCRYPTED WITH NO WAY OF READING THEM, IF YOU WANT TO SEE THE ENCRYPTED FILES RUN \"sFs raw\" IN THE SHELL --")
+
+-- Append old startup to new one
+if fs.exists("startup.lua") then
+    local old_startup = assert(fs.open("startup.lua", "r"))
+    new_startup.write(old_startup.readAll())
+    old_startup.close()
+    fs.delete("startup.lua")
 end
 
+new_startup.close()
+fs.move("new_starup.lua", "startup.lua")
+
+
+term.setTextColor(colors.orange)
+for i = 0, 5 do
+    write("Install complete; Rebooting in " .. tostring(5 - i))
+    term.setCursorPos(1, select(2, term.getCursorPos()))
+end
 term.redirect(oldTerm)
+os.reboot()
