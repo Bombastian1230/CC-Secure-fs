@@ -1,8 +1,8 @@
 local cc_strings = require("cc.strings")
-local utils      = require("sFs.utils")
-local crypto     = require("sFs.crypto")
-local pbkdf2     = require("sFs.pbkdf2")
-local chacha20   = require("sFs.chacha20")
+local utils      = require("utils")
+local crypto     = require("crypto")
+local pbkdf2     = require("pbkdf2")
+local chacha20   = require("chacha20")
 
 term.clear()
 term.setCursorPos(1, 1)
