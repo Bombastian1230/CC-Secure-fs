@@ -164,6 +164,7 @@ S_fs.open = function(path, mode)
     ---@param offset integer
     ---@return integer
     S_handle.seek = function(whence, offset)
+        O_handle.seek(whence, offset)
         return tmp_handle.seek(whence, offset)
     end
     ---Read the file content 'count' amount of bytes, defaults to 1
@@ -184,18 +185,15 @@ S_fs.open = function(path, mode)
         return tmp_handle.readLine(withTrailing)
     end
 
+    ---Functions like the normal read but it dosn't decrypt the data before reading)
+    ---@param count? number
+    S_handle.readRaw = function (count)
+        return O_handle.read(count or 1)
+    end
+
     if isWriteable then
         ----- Functions for Write handles
-        ---Write to the file using either a byte or string
-        ---@param ... string|integer
-        S_handle.write = function(...)
-            tmp_handle.write(...)
-        end
-        ---Write to the file using a string with a newline
-        S_handle.writeLine = function(line)
-            tmp_handle.writeLine(line)
-        end
-
+        
         local function saveToDisk() 
             local tmp_position = tmp_handle.seek("cur", 0)
             local O_position = O_handle.seek("cur", 0)
@@ -219,6 +217,22 @@ S_fs.open = function(path, mode)
 
             tmp_handle.seek("set", tmp_position)
             O_handle.seek("set", O_position)
+        end
+
+        ---Write to the file using either a byte or string
+        ---@param ... string|integer
+        S_handle.write = function(...)
+            tmp_handle.write(...)
+        end
+        ---Write to the file using a string with a newline
+        ---@param line string
+        S_handle.writeLine = function(line)
+            tmp_handle.writeLine(line)
+        end
+        ---Write to the file without encrypting the data first
+        ---@param data string
+        S_handle.writeRaw = function (data)
+            O_handle.write(data)
         end
 
         ---Flush the file, saving it without closing it
