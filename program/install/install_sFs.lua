@@ -360,40 +360,35 @@ term.blit("done", "dddd", "ffff")
 print()
 sleep(0.1)
 
-local transfer_file = assert(fs.open("sFs/transfer.txt", "w+"))
 for _, path in ipairs(file_to_encrypt) do
     write("Encrypting " .. path .. "  ")
-
-    local file = assert(fs.open(path, "r+"))
     local file_nonce = crypto.random_bytes(12)
 
-    file.write(file_nonce)
+    local tmp_path = path .. ".tmp"
+    local tmp_file = assert(fs.open(tmp_path, "w"))
+    tmp_file.write(file_nonce)
+
+    local original_file = assert(fs.open(path, "r"))
 
     while true do
-        local chunk = file.read(4096)
+        local chunk = original_file.read(4096)
         if chunk == nil then break end
 
         local e_chunk = chacha20.crypt(chunk, encryption_key, file_nonce)
-        transfer_file.write(chunk)
+        tmp_file.write(e_chunk)
     end
+    
+    tmp_file.close()
+    original_file.close()
 
-    transfer_file.seek("set", 0)
-    file.seek("set", 0)
-
-    while true do
-        local chunk = file.read(4096)
-        if chunk == nil then break end
-
-        file.write(chunk)
-    end
-    file.close()
-    transfer_file.seek("set", 0)
+    fs.delete(path)
+    fs.move(tmp_path, path)
+    
     term.blit("done", "dddd", "ffff")
-
     print()
     sleep(0.1)
 end
-
+fs.delete("sFs/transfer.txt")
 
 -- Add override to startup lua
 write("Adding sFs to startup  ")
