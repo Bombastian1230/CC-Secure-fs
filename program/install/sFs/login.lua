@@ -59,6 +59,7 @@ end
 
 local function manual_input()
     print(string.format("Type password carefully, it will take ~%d seconds to verify", (secrets.iterations * 2) / 1000))
+    print()
 
     local startX, startY = term.getCursorPos()
     
@@ -81,7 +82,7 @@ local function manual_input()
         end
 
         -- Full password check
-        local correct, d_pass = full_check()
+        local correct, d_pass = full_check(password)
 
         if correct then
             term.setTextColor(colors.green)
@@ -90,6 +91,7 @@ local function manual_input()
 
             return d_pass
         else
+            term.clearLine()
             term.setCursorPos(startX, startY)
             term.clearLine()
             term.setTextColor(colors.red)
@@ -151,7 +153,6 @@ end
 if d_pass == nil then
     d_pass = manual_input()
 end
-
 local encryption_key = chacha20.crypt(secrets.encrypted_e_key, d_pass, secrets.e_key_nonce)
 
 -- Overides
