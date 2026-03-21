@@ -314,8 +314,17 @@ print()
 sleep(0.1)
 
 
+-- Copy over all the program files
+local install_drive = fs.getDir(fs.find("*/install_sFs.lua")[1])
+write("Copying over files  ")
+fs.copy(fs.combine(install_drive, "sFs"), "/sFs")
+term.blit("done", "dddd", "ffff")
+print()
+sleep(0.1)
+
+
 -- Save the sensative data
-write("Createing folder  ")
+write("Creating folder  ")
 fs.makeDir("sFs")
 term.blit("done", "dddd", "ffff")
 print()
@@ -340,9 +349,8 @@ secrets_file.close()
 
 -- Find files to encrypt
 write("Finding all files  ")
-local install_drive = fs.getDir(fs.find("*/install_sFs.lua")[1])
 local file_to_encrypt = utils.recursive_file_list("/",
-    { ["rom"] = true, [install_drive] = true, ["startup.lua"] = true, [".settings"] = true })
+    { ["rom"] = true, [install_drive] = true, ["sFs"] = true, ["startup.lua"] = true, [".settings"] = true })
 term.blit("done", "dddd", "ffff")
 print()
 sleep(0.1)
@@ -380,14 +388,6 @@ for _, path in ipairs(file_to_encrypt) do
     print()
     sleep(0.1)
 end
-
-
--- Copy over all the program files
-write("Copying over files  ")
-fs.copy(fs.combine(install_drive, "sFs"), "/sFs")
-term.blit("done", "dddd", "ffff")
-print()
-sleep(0.1)
 
 
 -- Add override to startup lua
