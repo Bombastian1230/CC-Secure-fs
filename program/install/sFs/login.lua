@@ -209,5 +209,8 @@ end
 term.clear()
 
 settings.save()
+shell.setAlias("logout", "sFs/login.lua")
+shell.setAlias("sFs-raw", "sFs/raw_mode.lua")
+shell.setAlias("raw_mode", "sFs/raw_mode.lua")
 
 os.pullEvent = backup_pullEvent
