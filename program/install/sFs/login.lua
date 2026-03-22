@@ -171,7 +171,7 @@ if settings.get("sFs.raw_mode", false) then
     term.setCursorPos(math.floor((w - #msg) / 2) + 1, 1)
     term.write(msg)
 
-    local redirect_win = window.create(term.current(), 1, 2, w, h-1)
+    local redirect_win = window.create(term.current(), 1, 2, w, h - 1)
     term.redirect(redirect_win)
 
     settings.set("sFs.raw_mode", false)
@@ -185,13 +185,13 @@ else
     _G.loadfile = function(filename, mode, env)
         local handle = fs.open(filename, "r")
         if handle == nil then return nil, "File not found" end
-        
+
         local content = assert(handle.readAll())
         handle.close()
-        
+
         return load(content, "@" .. filename, mode, env or _G)
     end
-    
+
     ---Opens the named file and executes its content as a Lua chunk. When called without arguments, dofile executes the content of the standard input (stdin). Returns all values returned by the chunk. In case of errors, dofile propagates the error to its caller. (That is, dofile does not run in protected mode.)
     ---@param filename string
     ---@return ...
