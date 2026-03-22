@@ -1,2 +1,2 @@
-# CC Secure OS
-A secure encrypted os for cc tweaked
+# CC Secure Fs
+A secure encrypted filesystem for CC Tweaked
