@@ -202,6 +202,7 @@ else
     end
 
     _G.fs = require("secure_fs")
+    _G.crypto = require("crypto")
     fs.init_key(encryption_key)
     term.setCursorPos(1, 1)
 end
