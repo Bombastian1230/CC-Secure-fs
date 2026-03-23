@@ -165,6 +165,9 @@ S_fs.open = function(path, mode)
         O_handle.seek(whence, offset)
         return tmp_handle.seek(whence, offset)
     end
+    S_handle.getNonce = function ()
+        return S_handle.nonce
+    end
     ---Read the file content 'count' amount of bytes, defaults to 1
     ---@param count? number
     ---@return string content The content of the file
