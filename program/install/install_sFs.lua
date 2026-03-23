@@ -240,6 +240,9 @@ while true do
     end
 end
 
+local backup_pullEvent = os.pullEvent
+os.pullEvent = utils.pullEventOverride
+
 -- Set settings
 settings.define("sFs.auto_login",
     { description = "Whether or not to attempt an auto login", type = "boolean", default = false })
@@ -415,11 +418,50 @@ term.blit("done", "dddd", "ffff")
 print()
 sleep(0.1)
 
+
+local function setup_auto_login()
+    term.setTextColor(colors.orange)
+    print("Please insert a disk into a connected disk drive")
+    print("Hold \"ctrl T\" to cancel")
+    term.setTextColor(colors.white)
+
+    os.pullEvent = backup_pullEvent
+
+    local event, name = os.pullEvent("disk")
+
+    print("Disk inserted, continuing")
+
+    local drive = peripheral.wrap(name)
+    local mount_path = drive.getMountPath()
+    
+    local pass_file = fs.open(fs.combine(mount_path, "password.txt"), "w")
+    pass_file.write(password)
+    pass_file.close()
+
+    os.pullEvent = utils.pullEventOverride
+end
+
+if auto_login then
+    local success, err = pcall(setup_auto_login)
+
+    if success then
+        term.setTextColor(colors.green)
+        print("Auto login setup done")
+    else
+        term.setTextColor(colors.orange)
+        print("Auto loging setup failed; Reason:")
+        printError(err)
+        print("This error is not catastrofic, but you will need to manualy setup auto login")
+    end
+end
+
 term.setTextColor(colors.orange)
 for i = 0, 5 do
     write("Install complete; Rebooting in " .. tostring(5 - i))
     term.setCursorPos(1, select(2, term.getCursorPos()))
     sleep(1)
 end
+os.pullEvent = backup_pullEvent
 term.redirect(oldTerm)
+
 os.reboot()
