@@ -1,3 +1,4 @@
+package.path = package.path .. ";sFs/?.lua"
 local cc_strings = require("cc.strings")
 local utils      = require("utils")
 local crypto     = require("crypto")
