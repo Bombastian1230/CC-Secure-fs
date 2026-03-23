@@ -1,9 +1,10 @@
 package.path = package.path .. ";sFs/?.lua"
 local cc_strings = require("cc.strings")
 local utils      = require("utils")
-local crypto     = require("crypto")
 local pbkdf2     = require("pbkdf2")
 local chacha20   = require("chacha20")
+
+_G.crypto = require("crypto")
 
 term.clear()
 term.setCursorPos(1, 1)

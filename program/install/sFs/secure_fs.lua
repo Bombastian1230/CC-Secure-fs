@@ -1,4 +1,3 @@
-local crypto = require "crypto"
 local chacha20 = require("chacha20")
 
 S_fs = {}

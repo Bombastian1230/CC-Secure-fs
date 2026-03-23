@@ -31,7 +31,6 @@ end
 ---Generate a cryptograficly secure number
 ---@param length integer How many bytes (characters) long the string should be
 function crypto.random_bytes(length)
-    print(state.counter)
     if state.pool_key == nil or os.epoch("utc") - state.pool_key_gen_time > 600000 then
         if settings.get("crypto.use_random_org", false) then
             state.pool_key = get_secure_bytes(32)
