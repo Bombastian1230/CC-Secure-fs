@@ -323,7 +323,7 @@ sleep(0.1)
 
 
 -- Copy over all the program files
-local install_drive = fs.getDir(fs.find("*/install_sFs.lua")[1])
+local install_drive = fs.getDir(fs.find("*/install_sFs.lua")[1] or shell.getRunningProgram())
 write("Copying over files  ")
 fs.copy(fs.combine(install_drive, "sFs"), "/sFs")
 term.blit("done", "dddd", "ffff")
