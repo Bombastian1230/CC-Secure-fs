@@ -1,10 +1,10 @@
-package.path = package.path .. ";sFs/?.lua"
+package.path     = package.path .. ";sFs/?.lua"
 local cc_strings = require("cc.strings")
 local utils      = require("utils")
 local pbkdf2     = require("pbkdf2")
 local chacha20   = require("chacha20")
 
-_G.crypto = require("crypto")
+_G.crypto        = require("crypto")
 
 term.clear()
 term.setCursorPos(1, 1)
@@ -128,31 +128,29 @@ if agree:lower() == "n" then
 end
 
 -- How many iterations?
-local prompt = "Security level? p.5 (1:Normal 2:Strong  3:Very Strong)"
-local blit_fg = "000000000000000044442222222222222222222222222222222222"
+local prompt  = "Security level? p.5 (1:Fast 2:Normal 3:Strong  4:Very Strong)"
+local blit_fg = "0000000000000000444422222222222222222222222222222222222222222"
 local iterations, err
 while true do
     local response = ask(prompt, err, blit_fg):lower()
 
-    if response == "1" or response == "normal" then
-        iterations = 10
-    elseif response == "2" or response == "strong" then
+    if response == "1" or response == "fast" then
+        iterations = 5000
+    elseif response == "2" or response == "normal" then
+        iterations = 10000
+    elseif response == "3" or response == "strong" then
         iterations = 50000
-    elseif response == "3" or response == "very strong" then
+    elseif response == "4" or response == "very strong" then
         iterations = 100000
     else
         err = "Not a valid selection"
     end
 
     if iterations then
-        local prompt = string.format(
-            "Security level %s takes about %d seconds to verify your password, are you sure? (Y/n)", response,
-            (iterations * 2) / 1000)
-        local blit_fg = "000000000000000" ..
-            string.rep("3", #response) ..
-            "0000000000000" ..
-            string.rep("3", #tostring((iterations * 2) / 1000)) ..
-            "00000000000000000000000000000000000000000000000022222"
+        local time_to_derive = math.floor((iterations * 2) / 1000)
+
+        local prompt = string.format("Security level %s takes about %d seconds to verify your password, are you sure? (Y/n)", response, time_to_derive)
+        local blit_fg = "000000000000000" .. string.rep("3", #response) .. "0000000000000" .. string.rep("3", #tostring(time_to_derive)) .. "00000000000000000000000000000000000000000000000022222"
         local err
         while true do
             local response = ask(prompt, err, blit_fg)
@@ -174,7 +172,7 @@ while true do
 end
 
 -- Enable auto login
-local prompt = "Enable auto login? p.6 (Y/n)"
+local prompt  = "Enable auto login? p.6 (Y/n)"
 local blit_fg = "0000000000000000000444422222"
 local auto_login = false
 local err
@@ -192,7 +190,7 @@ end
 -- Eneable auto logout
 local auto_logout = false
 if term.isColor() then
-    local prompt = "Enable auto logout? p.6 (Y/n)"
+    local prompt  = "Enable auto logout? p.6 (Y/n)"
     local blit_fg = "00000000000000000000444422222"
     local err
     while true do
@@ -208,7 +206,7 @@ if term.isColor() then
 end
 
 -- Use random.org for random numbers
-local prompt = "Use random.org for random numbers? p.7 (Y/n)"
+local prompt  = "Use random.org for random numbers? p.7 (Y/n)"
 local blit_fg = "00000000000000000000000000000000000444422222"
 local allow_random = false
 local err
@@ -283,7 +281,7 @@ term.blit("done", "dddd", "ffff")
 print()
 sleep(0.1)
 
-local encryption_key = pbkdf2.derive(base_key, crypto.random_bytes(32), 10, "Generating encryption key")
+local encryption_key = pbkdf2.derive(base_key, crypto.random_bytes(32), 50000, "Generating encryption key")
 term.clearLine()
 term.setCursorPos(1, select(2, term.getCursorPos()))
 term.blit("Generating encryption key  done", "000000000000000000000000000dddd", "fffffffffffffffffffffffffffffff")
@@ -382,13 +380,13 @@ for _, path in ipairs(file_to_encrypt) do
 
         byte_offset = byte_offset + 4096
     end
-    
+
     tmp_file.close()
     original_file.close()
 
     fs.delete(path)
     fs.move(tmp_path, path)
-    
+
     term.blit("done", "dddd", "ffff")
     print()
     sleep(0.1)
@@ -400,7 +398,7 @@ write("Adding sFs to startup  ")
 local new_startup = assert(fs.open("new_starup.lua", "w"))
 new_startup.writeLine("shell.execute(\"sFs/login.lua\")")
 new_startup.writeLine(
-"-- DO NOT REMOVE ABOVE LINE, IF YOU DO SO ALL YOUR FILES WILL BE ENCRYPTED WITH NO WAY OF READING THEM, IF YOU WANT TO SEE THE ENCRYPTED FILES RUN \"sFs raw\" IN THE SHELL --")
+    "-- DO NOT REMOVE ABOVE LINE, IF YOU DO SO ALL YOUR FILES WILL BE ENCRYPTED WITH NO WAY OF READING THEM, IF YOU WANT TO SEE THE ENCRYPTED FILES RUN \"sFs raw\" IN THE SHELL --")
 
 
 -- Append old startup to new one
